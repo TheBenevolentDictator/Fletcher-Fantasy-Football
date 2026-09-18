@@ -3,18 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Presentation</title>
-  <style>
-    body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #000; }
-    iframe { border: 0; width: 100%; height: 100%; }
-  </style>
+  <title>Analytics & Briefing Hub</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <iframe 
-    src="https://docs.google.com/presentation/d/13OSWQzObzidwpg1jfw6kfESQ3u6CrSL8QZeeCTXWHrk/embed?start=false&loop=false&delayms=3000" 
-    allowfullscreen="true" 
-    mozallowfullscreen="true" 
-    webkitallowfullscreen="true">
-  </iframe>
+  <div class="hub-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="brand">
+        <h2>Operations Hub</h2>
+        <span class="badge">Weekly Reviews</span>
+      </div>
+      <div class="filter-controls">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="slides">Decks</button>
+        <button class="filter-btn" data-filter="chart">Data Vis</button>
+      </div>
+      <ul id="deck-list" class="deck-list">
+        <!-- Injected dynamically from content.json -->
+      </ul>
+    </aside>
+
+    <!-- Main Content Stage -->
+    <main class="viewer-stage">
+      <header class="stage-header">
+        <h1 id="active-title">Select an item</h1>
+        <div class="stage-actions">
+          <a id="open-external" href="#" target="_blank" rel="noopener">Open in New Tab ↗</a>
+        </div>
+      </header>
+      <div class="frame-container">
+        <iframe id="main-frame" src="" allowfullscreen="true"></iframe>
+      </div>
+    </main>
+  </div>
+  <script src="app.js"></script>
 </body>
 </html>
