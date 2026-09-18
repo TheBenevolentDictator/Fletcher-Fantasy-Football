@@ -1,101 +1,319 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Analytics & Briefing Hub | FFL</title>
-  <link rel="stylesheet" href="style.css">
-  <style>
-    /* Direct fallback to prevent runaway image sizing */
-    #splash-screen {
-      position: fixed;
-      inset: 0;
-      width: 100vw;
-      height: 100dvh;
-      background: rgba(11, 17, 32, 0.96);
-      z-index: 999999;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 1rem;
-      cursor: pointer;
-    }
-    #splash-screen.dismissed {
-      display: none !important;
-    }
-    .splash-card-inner {
-      max-width: 360px;
-      width: 100%;
-      background: #0f172a;
-      border: 1px solid #334155;
-      border-radius: 12px;
-      overflow: hidden;
-      text-align: center;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.8);
-    }
-    .splash-card-inner img {
-      width: 100%;
-      max-height: 50vh;
-      object-fit: cover;
-      object-position: top center;
-      display: block;
-    }
-    .splash-details {
-      padding: 1rem;
-    }
-  </style>
-</head>
-<body>
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
-  <!-- Tap anywhere on this screen to enter -->
-  <section id="splash-screen" onclick="this.classList.add('dismissed')">
-    <div class="splash-card-inner" onclick="event.stopPropagation();">
-      <img src="commissioner.png.jpeg" alt="FFL Commissioner">
-      <div class="splash-details">
-        <div style="font-size: 0.7rem; color: #38bdf8; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;">Official Communiqué</div>
-        <h1 style="font-size: 1.1rem; margin: 0.4rem 0; color: #f8fafc;">Welcome to the FFL</h1>
-        <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 1rem;">Office of the Commissioner</p>
-        <button type="button" onclick="document.getElementById('splash-screen').classList.add('dismissed')" style="width: 100%; padding: 0.7rem; background: #38bdf8; color: #0b1120; border: none; border-radius: 6px; font-weight: 700; font-size: 0.9rem; cursor: pointer;">
-          Enter Operations Hub ➔
-        </button>
-      </div>
-    </div>
-  </section>
+:root {
+  --bg-main: #0b1120;
+  --bg-surface: #0f172a;
+  --bg-card: #1e293b;
+  --border-color: #334155;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --accent: #38bdf8;
+}
 
-  <!-- Main Application Container -->
-  <div class="hub-container">
-    <aside class="sidebar">
-      <div class="brand">
-        <h2>Operations Hub</h2>
-        <span class="badge">Weekly Reviews</span>
-      </div>
-      <div class="filter-controls">
-        <button class="filter-btn active" data-filter="all">All</button>
-        <button class="filter-btn" data-filter="slides">Decks</button>
-        <button class="filter-btn" data-filter="chart">Data Vis</button>
-      </div>
-      <ul id="deck-list" class="deck-list"></ul>
-      
-      <div class="visit-counter">
-        Visits: <span id="visit-count">...</span>
-      </div>
-    </aside>
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
 
-    <main class="viewer-stage">
-      <header class="stage-header">
-        <h1 id="active-title">Loading...</h1>
-        <div class="stage-actions">
-          <button id="fullscreen-btn" class="action-btn" type="button">⛶ Fullscreen</button>
-          <a id="open-external" href="#" target="_blank" rel="noopener">Open in New Tab ↗</a>
-        </div>
-      </header>
-      <div class="frame-container" id="frame-container">
-        <button id="fs-close-btn" class="fs-close-btn" type="button" aria-label="Exit Fullscreen">✕ Close</button>
-        <iframe id="main-frame" src="" allow="fullscreen" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
-      </div>
-    </main>
-  </div>
+/* Splash Screen Overlay */
+#splash-screen {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  background: rgba(11, 17, 32, 0.96);
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  cursor: pointer;
+}
 
-  <script src="app.js"></script>
-</body>
-</html>
+#splash-screen.dismissed {
+  display: none !important;
+}
+
+.splash-card-inner {
+  max-width: 360px;
+  width: 100%;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+  text-align: center;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
+  cursor: default;
+}
+
+.splash-card-inner img {
+  width: 100%;
+  max-height: 48vh;
+  object-fit: cover;
+  object-position: top center;
+  display: block;
+}
+
+.splash-details {
+  padding: 1.25rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.splash-badge {
+  font-size: 0.7rem;
+  color: var(--accent);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.splash-details h1 {
+  font-size: 1.15rem;
+  color: var(--text-primary);
+}
+
+.splash-details p {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+#enter-hub-btn {
+  width: 100%;
+  padding: 0.75rem;
+  background: var(--accent);
+  color: #0b1120;
+  border: none;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+/* Hub Layout */
+.hub-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+@media (min-width: 768px) {
+  .hub-container {
+    flex-direction: row;
+  }
+}
+
+.sidebar {
+  background-color: var(--bg-surface);
+  border-bottom: 1px solid var(--border-color);
+  padding: 1.25rem;
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .sidebar {
+    width: 300px;
+    min-height: 100vh;
+    border-bottom: none;
+    border-right: 1px solid var(--border-color);
+  }
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.brand h2 {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.badge {
+  font-size: 0.75rem;
+  background: var(--bg-card);
+  color: var(--accent);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.filter-controls {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.filter-btn {
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.filter-btn.active {
+  background: var(--accent);
+  color: #0b1120;
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+.deck-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.deck-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  padding: 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.deck-item.selected {
+  border-color: var(--accent);
+}
+
+.deck-item .item-type {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+
+.deck-item .item-title {
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.deck-item .item-date {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+/* Viewer Stage */
+.viewer-stage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 1.25rem;
+  background: var(--bg-main);
+}
+
+.stage-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+@media (min-width: 600px) {
+  .stage-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
+
+.stage-header h1 {
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.stage-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.action-btn, #open-external {
+  font-size: 0.8rem;
+  text-decoration: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.action-btn {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+}
+
+#open-external {
+  color: var(--accent);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.frame-container {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+
+.frame-container iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+.fs-close-btn {
+  display: none;
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: rgba(15, 23, 42, 0.9);
+  color: #fff;
+  border: 1px solid var(--border-color);
+  padding: 0.5rem 0.9rem;
+  border-radius: 6px;
+  z-index: 1000000;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+/* Pseudo-fullscreen logic */
+.frame-container.pseudo-fullscreen {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  max-width: 100vw !important;
+  max-height: 100dvh !important;
+  z-index: 999998 !important;
+  border-radius: 0 !important;
+  aspect-ratio: auto !important;
+  border: none !important;
+}
+
+.frame-container.pseudo-fullscreen .fs-close-btn {
+  display: block !important;
+}
