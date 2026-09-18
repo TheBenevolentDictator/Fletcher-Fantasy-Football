@@ -1,323 +1,101 @@
-:root {
-  --bg-main: #0b1120;
-  --bg-sidebar: #0f172a;
-  --bg-card: #1e293b;
-  --bg-card-hover: #334155;
-  --border-color: #1e293b;
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --accent: #38bdf8;
-  --badge-slides: #0284c7;
-  --badge-chart: #10b981;
-}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Analytics & Briefing Hub | FFL</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* Direct fallback to prevent runaway image sizing */
+    #splash-screen {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100dvh;
+      background: rgba(11, 17, 32, 0.96);
+      z-index: 999999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      cursor: pointer;
+    }
+    #splash-screen.dismissed {
+      display: none !important;
+    }
+    .splash-card-inner {
+      max-width: 360px;
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      overflow: hidden;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+    }
+    .splash-card-inner img {
+      width: 100%;
+      max-height: 50vh;
+      object-fit: cover;
+      object-position: top center;
+      display: block;
+    }
+    .splash-details {
+      padding: 1rem;
+    }
+  </style>
+</head>
+<body>
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+  <!-- Tap anywhere on this screen to enter -->
+  <section id="splash-screen" onclick="this.classList.add('dismissed')">
+    <div class="splash-card-inner" onclick="event.stopPropagation();">
+      <img src="commissioner.png.jpeg" alt="FFL Commissioner">
+      <div class="splash-details">
+        <div style="font-size: 0.7rem; color: #38bdf8; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;">Official Communiqué</div>
+        <h1 style="font-size: 1.1rem; margin: 0.4rem 0; color: #f8fafc;">Welcome to the FFL</h1>
+        <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 1rem;">Office of the Commissioner</p>
+        <button type="button" onclick="document.getElementById('splash-screen').classList.add('dismissed')" style="width: 100%; padding: 0.7rem; background: #38bdf8; color: #0b1120; border: none; border-radius: 6px; font-weight: 700; font-size: 0.9rem; cursor: pointer;">
+          Enter Operations Hub ➔
+        </button>
+      </div>
+    </div>
+  </section>
 
-html, body {
-  height: 100%;
-  height: 100dvh;
-  width: 100%;
-  background-color: var(--bg-main);
-  color: var(--text-primary);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  overflow: hidden;
-}
+  <!-- Main Application Container -->
+  <div class="hub-container">
+    <aside class="sidebar">
+      <div class="brand">
+        <h2>Operations Hub</h2>
+        <span class="badge">Weekly Reviews</span>
+      </div>
+      <div class="filter-controls">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="slides">Decks</button>
+        <button class="filter-btn" data-filter="chart">Data Vis</button>
+      </div>
+      <ul id="deck-list" class="deck-list"></ul>
+      
+      <div class="visit-counter">
+        Visits: <span id="visit-count">...</span>
+      </div>
+    </aside>
 
-.hub-container {
-  display: grid;
-  grid-template-columns: 300px 1fr;
-  height: 100%;
-  width: 100%;
-}
+    <main class="viewer-stage">
+      <header class="stage-header">
+        <h1 id="active-title">Loading...</h1>
+        <div class="stage-actions">
+          <button id="fullscreen-btn" class="action-btn" type="button">⛶ Fullscreen</button>
+          <a id="open-external" href="#" target="_blank" rel="noopener">Open in New Tab ↗</a>
+        </div>
+      </header>
+      <div class="frame-container" id="frame-container">
+        <button id="fs-close-btn" class="fs-close-btn" type="button" aria-label="Exit Fullscreen">✕ Close</button>
+        <iframe id="main-frame" src="" allow="fullscreen" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
+      </div>
+    </main>
+  </div>
 
-/* Desktop Sidebar */
-.sidebar {
-  background-color: var(--bg-sidebar);
-  border-right: 1px solid var(--border-color);
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-}
-
-.brand {
-  padding: 1.25rem 1rem 0.75rem;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.brand h2 {
-  font-size: 1.15rem;
-  font-weight: 700;
-}
-
-.badge {
-  display: inline-block;
-  font-size: 0.7rem;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-top: 0.2rem;
-}
-
-.filter-controls {
-  display: flex;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.filter-btn {
-  background: transparent;
-  border: 1px solid #334155;
-  color: var(--text-secondary);
-  padding: 0.3rem 0.65rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.filter-btn.active {
-  background-color: var(--accent);
-  border-color: var(--accent);
-  color: #0b1120;
-}
-
-.deck-list {
-  list-style: none;
-  padding: 0.75rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.deck-item {
-  padding: 0.75rem;
-  border-radius: 6px;
-  border: 1px solid transparent;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  background-color: transparent;
-}
-
-.deck-item:hover, .deck-item.selected {
-  background-color: var(--bg-card);
-  border-color: var(--border-color);
-}
-
-.deck-item.selected {
-  border-color: var(--accent);
-}
-
-.item-type {
-  font-size: 0.65rem;
-  font-weight: 700;
-  padding: 0.1rem 0.4rem;
-  border-radius: 4px;
-  width: fit-content;
-}
-
-.item-type.slides { background-color: var(--badge-slides); color: #fff; }
-.item-type.chart { background-color: var(--badge-chart); color: #fff; }
-
-.item-title {
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-
-.item-date {
-  font-size: 0.7rem;
-  color: var(--text-secondary);
-}
-
-/* Stage */
-.viewer-stage {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  background-color: #000;
-  overflow: hidden;
-}
-
-.stage-header {
-  padding: 0.75rem 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background-color: var(--bg-main);
-  border-bottom: 1px solid var(--border-color);
-  flex-shrink: 0;
-}
-
-.stage-header h1 {
-  font-size: 1rem;
-  font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 60%;
-}
-
-.stage-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.stage-actions a {
-  font-size: 0.8rem;
-  color: var(--accent);
-  text-decoration: none;
-}
-
-.action-btn {
-  background: transparent;
-  border: 1px solid #334155;
-  color: var(--accent);
-  padding: 0.25rem 0.6rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  font-weight: 500;
-  cursor: pointer;
-}
-
-/* Frame Player Container */
-.frame-container {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #000;
-  position: relative;
-  width: 100%;
-  height: 100%;
-}
-
-.frame-container iframe {
-  width: 100%;
-  height: 100%;
-  max-width: 100%;
-  aspect-ratio: 16 / 9;
-  border: none;
-}
-
-/* In-Frame Close Overlay Button (Hidden until Fullscreen) */
-.fs-close-btn {
-  display: none;
-  position: absolute;
-  top: max(1rem, env(safe-area-inset-top));
-  right: max(1rem, env(safe-area-inset-right));
-  z-index: 2147483647;
-  background: rgba(15, 23, 42, 0.85);
-  border: 1px solid #334155;
-  color: #fff;
-  padding: 0.5rem 0.85rem;
-  border-radius: 9999px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  backdrop-filter: blur(8px);
-  cursor: pointer;
-}
-
-/* Pseudo Fullscreen Fallback for iOS / Safari */
-.frame-container.pseudo-fullscreen {
-  position: fixed !important;
-  inset: 0 !important;
-  width: 100vw !important;
-  height: 100dvh !important;
-  z-index: 2147483640 !important;
-  background: #000 !important;
-}
-
-.frame-container.pseudo-fullscreen .fs-close-btn {
-  display: block;
-}
-
-.frame-container.pseudo-fullscreen iframe {
-  width: 100% !important;
-  height: 100% !important;
-  aspect-ratio: auto !important;
-}
-
-/* Native Fullscreen overrides */
-.frame-container:fullscreen .fs-close-btn,
-.frame-container:-webkit-full-screen .fs-close-btn {
-  display: block;
-}
-
-.frame-container:fullscreen iframe,
-.frame-container:-webkit-full-screen iframe {
-  width: 100vw;
-  height: 100vh;
-  aspect-ratio: auto;
-}
-
-/* Mobile Optimizations */
-@media (max-width: 768px) {
-  .hub-container {
-    display: flex;
-    flex-direction: column;
-    height: 100dvh;
-    width: 100vw;
-  }
-
-  .sidebar {
-    flex-shrink: 0;
-    border-right: none;
-    border-bottom: 1px solid var(--border-color);
-  }
-
-  .brand, .filter-controls {
-    display: none;
-  }
-
-  .deck-list {
-    flex-direction: row;
-    overflow-x: auto;
-    padding: 0.5rem;
-    gap: 0.5rem;
-    white-space: nowrap;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .deck-item {
-    flex-direction: row;
-    align-items: center;
-    padding: 0.35rem 0.65rem;
-    gap: 0.4rem;
-    background-color: var(--bg-card);
-    border-radius: 9999px;
-  }
-
-  .deck-item .item-date {
-    display: none;
-  }
-
-  .deck-item .item-title {
-    font-size: 0.8rem;
-  }
-
-  .stage-header {
-    padding: 0.4rem 0.75rem;
-  }
-
-  .stage-header h1 {
-    font-size: 0.85rem;
-  }
-
-  .frame-container {
-    flex: 1;
-    align-items: flex-start;
-  }
-
-  .frame-container iframe {
-    width: 100vw;
-    height: auto;
-    aspect-ratio: 16 / 9;
-  }
-}
+  <script src="app.js"></script>
+</body>
+</html>
