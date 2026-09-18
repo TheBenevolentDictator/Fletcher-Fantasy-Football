@@ -7,12 +7,12 @@
 :root {
   --bg-main: #0b1120;
   --bg-surface: #0f172a;
-  --bg-card: #1e293b;
+  --bg-card: #F37121;
   --border-color: #334155;
   --text-primary: #f8fafc;
-  --text-secondary: #F37121;
+  --text-secondary: #94a3b8;
   --accent: #38bdf8;
-  --save-secondary: #94a3b8;
+  --save-bg-card: #1e293b;
 }
 
 body {
