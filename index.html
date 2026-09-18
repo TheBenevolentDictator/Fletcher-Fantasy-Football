@@ -3,10 +3,27 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Analytics & Briefing Hub</title>
+  <title>Analytics & Briefing Hub | FFL</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
+  <!-- Commissioner Splash Landing Overlay -->
+  <section id="splash-screen" class="splash-screen">
+    <div class="splash-card">
+      <div class="splash-image-frame">
+        <img src="commissioner.png.jpeg" alt="FFL Commissioner" class="splash-img">
+      </div>
+      <div class="splash-content">
+        <span class="splash-kicker">Official Communiqué</span>
+        <h1 class="splash-title">Welcome to the Official Site of the FFL</h1>
+        <p class="splash-subtitle">Office of the Commissioner & Executive Briefings</p>
+        <button id="enter-hub-btn" class="splash-btn" type="button">Enter Operations Hub ➔</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Application Container -->
   <div class="hub-container">
     <aside class="sidebar">
       <div class="brand">
@@ -19,6 +36,11 @@
         <button class="filter-btn" data-filter="chart">Data Vis</button>
       </div>
       <ul id="deck-list" class="deck-list"></ul>
+      
+      <!-- Public Hit Counter -->
+      <div class="visit-counter">
+        Visits: <span id="visit-count">...</span>
+      </div>
     </aside>
 
     <main class="viewer-stage">
@@ -35,6 +57,7 @@
       </div>
     </main>
   </div>
+
   <script src="app.js"></script>
 </body>
 </html>
