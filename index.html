@@ -5,20 +5,66 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Analytics & Briefing Hub | FFL</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    /* Direct inline protection against image overflow */
+    #splash-screen {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100dvh;
+      background: rgba(11, 17, 32, 0.95);
+      z-index: 999999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      cursor: pointer;
+      box-sizing: border-box;
+    }
+    #splash-screen.dismissed {
+      display: none !important;
+    }
+    .splash-card-box {
+      max-width: 360px;
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      overflow: hidden;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+      display: flex;
+      flex-direction: column;
+    }
+    .splash-card-box img {
+      width: 100%;
+      height: auto;
+      max-height: 48vh;
+      object-fit: cover;
+      object-position: top center;
+      display: block;
+    }
+    .splash-body {
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+  </style>
 </head>
 <body>
 
-  <!-- Commissioner Splash Landing Overlay -->
-  <section id="splash-screen" class="splash-screen">
-    <div class="splash-card">
-      <div class="splash-image-frame">
-        <img src="commissioner.png.jpeg" alt="FFL Commissioner" class="splash-img">
-      </div>
-      <div class="splash-content">
-        <span class="splash-kicker">Official Communiqué</span>
-        <h1 class="splash-title">Welcome to the Official Site of the FFL</h1>
-        <p class="splash-subtitle">Office of the Commissioner & Executive Briefings</p>
-        <button id="enter-hub-btn" class="splash-btn" type="button">Enter Operations Hub ➔</button>
+  <!-- Splash Screen Overlay (Tap anywhere to dismiss) -->
+  <section id="splash-screen" onclick="this.classList.add('dismissed')">
+    <div class="splash-card-box" onclick="event.stopPropagation();">
+      <img src="commissioner.png.jpeg" alt="FFL Commissioner">
+      <div class="splash-body">
+        <span style="font-size: 0.7rem; color: #38bdf8; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;">Official Communiqué</span>
+        <h1 style="font-size: 1.15rem; color: #f8fafc; margin: 0;">Welcome to the FFL</h1>
+        <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.5rem;">Office of the Commissioner</p>
+        <button type="button" onclick="document.getElementById('splash-screen').classList.add('dismissed')" style="width: 100%; padding: 0.75rem; background: #38bdf8; color: #0b1120; border: none; border-radius: 6px; font-weight: 700; font-size: 0.9rem; cursor: pointer;">
+          Enter Operations Hub ➔
+        </button>
       </div>
     </div>
   </section>
@@ -36,16 +82,11 @@
         <button class="filter-btn" data-filter="chart">Data Vis</button>
       </div>
       <ul id="deck-list" class="deck-list"></ul>
-      
-      <!-- Public Hit Counter -->
-      <div class="visit-counter">
-        Visits: <span id="visit-count">...</span>
-      </div>
     </aside>
 
     <main class="viewer-stage">
       <header class="stage-header">
-        <h1 id="active-title">Loading...</h1>
+        <h1 id="active-title">FFL Operations Hub</h1>
         <div class="stage-actions">
           <button id="fullscreen-btn" class="action-btn" type="button">⛶ Fullscreen</button>
           <a id="open-external" href="#" target="_blank" rel="noopener">Open in New Tab ↗</a>
