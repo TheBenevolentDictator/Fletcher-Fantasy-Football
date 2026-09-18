@@ -2,13 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Analytics & Briefing Hub</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="hub-container">
-    <!-- Sidebar Navigation -->
     <aside class="sidebar">
       <div class="brand">
         <h2>Operations Hub</h2>
@@ -19,22 +18,20 @@
         <button class="filter-btn" data-filter="slides">Decks</button>
         <button class="filter-btn" data-filter="chart">Data Vis</button>
       </div>
-      <ul id="deck-list" class="deck-list">
-        <!-- Injected dynamically from content.json -->
-      </ul>
+      <ul id="deck-list" class="deck-list"></ul>
     </aside>
 
-    <!-- Main Content Stage -->
     <main class="viewer-stage">
       <header class="stage-header">
-        <h1 id="active-title">Select an item</h1>
-      <div class="stage-actions">
-        <button id="fullscreen-btn" class="action-btn" title="Fullscreen">⛶ Fullscreen</button>
-        <a id="open-external" href="#" target="_blank" rel="noopener">Open in New Tab ↗</a>
-      </div>
+        <h1 id="active-title">Loading...</h1>
+        <div class="stage-actions">
+          <button id="fullscreen-btn" class="action-btn" type="button">⛶ Fullscreen</button>
+          <a id="open-external" href="#" target="_blank" rel="noopener">Open in New Tab ↗</a>
+        </div>
       </header>
-      <div class="frame-container">
-        <iframe id="main-frame" src="" allowfullscreen="true"></iframe>
+      <div class="frame-container" id="frame-container">
+        <button id="fs-close-btn" class="fs-close-btn" type="button" aria-label="Exit Fullscreen">✕ Close</button>
+        <iframe id="main-frame" src="" allow="fullscreen" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
       </div>
     </main>
   </div>
