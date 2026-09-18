@@ -1,5 +1,4 @@
 document.addEventListener("DOMContentLoaded", () => {
-  // Elements
   const splashScreen = document.getElementById("splash-screen");
   const enterHubBtn = document.getElementById("enter-hub-btn");
   const fsBtn = document.getElementById("fullscreen-btn");
@@ -11,7 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const openExternal = document.getElementById("open-external");
   const filterBtns = document.querySelectorAll(".filter-btn");
 
-  // 1. Splash Dismissal (Immediate)
+  // 1. Splash Screen Dismissal
   function dismissSplash() {
     if (splashScreen) {
       splashScreen.classList.add("dismissed");
@@ -19,27 +18,26 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   if (enterHubBtn) enterHubBtn.addEventListener("click", dismissSplash);
-  if (splashScreen) splashScreen.addEventListener("click", dismissSplash);
+  if (splashScreen) {
+    splashScreen.addEventListener("click", (e) => {
+      if (e.target === splashScreen) dismissSplash();
+    });
+  }
 
-  // 2. Fullscreen Handlers (Bound immediately so they NEVER fail)
+  // 2. Fullscreen Handlers
   function toggleFullscreen() {
     if (!frameContainer) return;
 
-    // Check if currently pseudo-fullscreen
     if (frameContainer.classList.contains("pseudo-fullscreen")) {
       exitFullscreen();
       return;
     }
 
-    // Try Native Fullscreen (Desktop / Android)
     if (frameContainer.requestFullscreen) {
-      frameContainer.requestFullscreen().catch(() => {
-        enterPseudoFullscreen();
-      });
+      frameContainer.requestFullscreen().catch(() => enterPseudoFullscreen());
     } else if (frameContainer.webkitRequestFullscreen) {
       frameContainer.webkitRequestFullscreen();
     } else {
-      // Fallback for iOS Safari which blocks iframe requestFullscreen
       enterPseudoFullscreen();
     }
   }
@@ -77,20 +75,14 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Handle native escape/exit events
   document.addEventListener("fullscreenchange", () => {
     if (!document.fullscreenElement && frameContainer) {
       frameContainer.classList.remove("pseudo-fullscreen");
+      document.body.style.overflow = "";
     }
   });
 
-  document.addEventListener("webkitfullscreenchange", () => {
-    if (!document.webkitFullscreenElement && frameContainer) {
-      frameContainer.classList.remove("pseudo-fullscreen");
-    }
-  });
-
-  // 3. Content Loading (Isolated so errors do not break UI controls)
+  // 3. Data & Deck Loading
   let items = [];
 
   function loadItem(item) {
@@ -110,11 +102,11 @@ document.addEventListener("DOMContentLoaded", () => {
         <span class="item-title">${item.title}</span>
         <span class="item-date">${item.date}</span>
       `;
-      li.onclick = () => {
+      li.addEventListener("click", () => {
         document.querySelectorAll(".deck-item").forEach((el) => el.classList.remove("selected"));
         li.classList.add("selected");
         loadItem(item);
-      };
+      });
       deckList.appendChild(li);
     });
   }
