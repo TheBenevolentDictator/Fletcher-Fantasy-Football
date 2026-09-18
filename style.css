@@ -34,7 +34,7 @@ html, body {
   width: 100%;
 }
 
-/* Sidebar - Desktop */
+/* Desktop Sidebar */
 .sidebar {
   background-color: var(--bg-sidebar);
   border-right: 1px solid var(--border-color);
@@ -135,7 +135,7 @@ html, body {
   color: var(--text-secondary);
 }
 
-/* Stage & Player Frame */
+/* Stage */
 .viewer-stage {
   display: flex;
   flex-direction: column;
@@ -157,6 +157,16 @@ html, body {
 .stage-header h1 {
   font-size: 1rem;
   font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 60%;
+}
+
+.stage-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
 .stage-actions a {
@@ -165,6 +175,18 @@ html, body {
   text-decoration: none;
 }
 
+.action-btn {
+  background: transparent;
+  border: 1px solid #334155;
+  color: var(--accent);
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* Frame Player Container */
 .frame-container {
   flex: 1;
   display: flex;
@@ -184,6 +206,57 @@ html, body {
   border: none;
 }
 
+/* In-Frame Close Overlay Button (Hidden until Fullscreen) */
+.fs-close-btn {
+  display: none;
+  position: absolute;
+  top: max(1rem, env(safe-area-inset-top));
+  right: max(1rem, env(safe-area-inset-right));
+  z-index: 2147483647;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid #334155;
+  color: #fff;
+  padding: 0.5rem 0.85rem;
+  border-radius: 9999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+}
+
+/* Pseudo Fullscreen Fallback for iOS / Safari */
+.frame-container.pseudo-fullscreen {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  z-index: 2147483640 !important;
+  background: #000 !important;
+}
+
+.frame-container.pseudo-fullscreen .fs-close-btn {
+  display: block;
+}
+
+.frame-container.pseudo-fullscreen iframe {
+  width: 100% !important;
+  height: 100% !important;
+  aspect-ratio: auto !important;
+}
+
+/* Native Fullscreen overrides */
+.frame-container:fullscreen .fs-close-btn,
+.frame-container:-webkit-full-screen .fs-close-btn {
+  display: block;
+}
+
+.frame-container:fullscreen iframe,
+.frame-container:-webkit-full-screen iframe {
+  width: 100vw;
+  height: 100vh;
+  aspect-ratio: auto;
+}
+
 /* Mobile Optimizations */
 @media (max-width: 768px) {
   .hub-container {
@@ -197,16 +270,12 @@ html, body {
     flex-shrink: 0;
     border-right: none;
     border-bottom: 1px solid var(--border-color);
-    background-color: var(--bg-sidebar);
   }
 
-  /* Hide desktop-only branding and redundant filter chips on phone screens */
-  .brand,
-  .filter-controls {
+  .brand, .filter-controls {
     display: none;
   }
 
-  /* Single-line horizontal scrolling feed */
   .deck-list {
     flex-direction: row;
     overflow-x: auto;
@@ -235,7 +304,6 @@ html, body {
 
   .stage-header {
     padding: 0.4rem 0.75rem;
-    min-height: auto;
   }
 
   .stage-header h1 {
@@ -252,38 +320,4 @@ html, body {
     height: auto;
     aspect-ratio: 16 / 9;
   }
-}
-.stage-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.action-btn {
-  background: transparent;
-  border: 1px solid var(--border-color);
-  color: var(--accent);
-  padding: 0.25rem 0.6rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  font-weight: 500;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  transition: all 0.15s ease;
-}
-
-.action-btn:hover {
-  background-color: var(--bg-card);
-  border-color: var(--accent);
-}
-
-/* Ensure container expands cleanly in native fullscreen */
-.frame-container:fullscreen iframe,
-.frame-container:-webkit-full-screen iframe {
-  width: 100vw;
-  height: 100vh;
-  max-width: 100vw;
-  aspect-ratio: auto;
 }
