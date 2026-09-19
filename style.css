@@ -5,14 +5,13 @@
 }
 
 :root {
-  --bg-main: #0b1120;
-  --bg-surface: #0f172a;
-  --bg-card: #1e293b;
-  --border-color: #334155;
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --accent: #38bdf8;
-  --save-bg-card: #F37121;
+  --bg-main: #000000;
+  --bg-surface: #0a0a0a;
+  --bg-card: #141414;
+  --border-color: #262626;
+  --text-primary: #ffffff;
+  --text-secondary: #a3a3a3;
+  --accent: #F37121;
 }
 
 body {
@@ -29,7 +28,7 @@ body {
   inset: 0;
   width: 100vw;
   height: 100dvh;
-  background: rgba(11, 17, 32, 0.96);
+  background: rgba(0, 0, 0, 0.96);
   z-index: 999999;
   display: flex;
   align-items: center;
@@ -50,7 +49,7 @@ body {
   border-radius: 12px;
   overflow: hidden;
   text-align: center;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.9);
   cursor: default;
 }
 
@@ -79,7 +78,8 @@ body {
 
 .splash-details h1 {
   font-size: 1.15rem;
-  color: var(--text-primary);
+  color: #ffffff;
+  font-weight: 700;
 }
 
 .splash-details p {
@@ -92,7 +92,7 @@ body {
   width: 100%;
   padding: 0.75rem;
   background: var(--accent);
-  color: #0b1120;
+  color: #ffffff;
   border: none;
   border-radius: 6px;
   font-weight: 700;
@@ -105,6 +105,7 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  background-color: var(--bg-main);
 }
 
 @media (min-width: 768px) {
@@ -139,6 +140,7 @@ body {
 .brand h2 {
   font-size: 1.15rem;
   font-weight: 700;
+  color: #ffffff;
 }
 
 .badge {
@@ -148,6 +150,7 @@ body {
   padding: 0.2rem 0.5rem;
   border-radius: 4px;
   font-weight: 600;
+  border: 1px solid var(--border-color);
 }
 
 .filter-controls {
@@ -168,7 +171,7 @@ body {
 
 .filter-btn.active {
   background: var(--accent);
-  color: #0b1120;
+  color: #ffffff;
   border-color: var(--accent);
   font-weight: 600;
 }
@@ -193,6 +196,7 @@ body {
 
 .deck-item.selected {
   border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
 }
 
 .deck-item .item-type {
@@ -204,7 +208,7 @@ body {
 
 .deck-item .item-title {
   font-size: 0.9rem;
-  color: var(--text-primary);
+  color: #ffffff;
   font-weight: 600;
 }
 
@@ -240,6 +244,7 @@ body {
 .stage-header h1 {
   font-size: 1.3rem;
   font-weight: 700;
+  color: #ffffff;
 }
 
 .stage-actions {
@@ -255,25 +260,26 @@ body {
   border-radius: 6px;
   display: inline-flex;
   align-items: center;
+  font-weight: 600;
 }
 
 .action-btn {
   background: var(--bg-card);
-  color: var(--text-primary);
+  color: #ffffff;
   border: 1px solid var(--border-color);
   cursor: pointer;
 }
 
 #open-external {
   color: var(--accent);
-  border: 1px solid rgba(56, 189, 248, 0.3);
+  border: 1px solid var(--accent);
 }
 
 .frame-container {
   position: relative;
   width: 100%;
   aspect-ratio: 16 / 9;
-  background: #000;
+  background: #000000;
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid var(--border-color);
@@ -291,8 +297,8 @@ body {
   position: absolute;
   top: 1rem;
   right: 1rem;
-  background: rgba(15, 23, 42, 0.9);
-  color: #fff;
+  background: rgba(20, 20, 20, 0.9);
+  color: #ffffff;
   border: 1px solid var(--border-color);
   padding: 0.5rem 0.9rem;
   border-radius: 6px;
