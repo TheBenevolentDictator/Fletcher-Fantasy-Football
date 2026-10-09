@@ -482,9 +482,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // If Google Sheet is connected, try to render live data
     if (savedSheetId && tabName) {
+      let weeklyPrRows = liveTabCache["Weekly PR"] || null;
+      if (visId === "power-rankings" && !weeklyPrRows) {
+        try {
+          weeklyPrRows = await window.FFL_DATA.fetchTab(savedSheetId, "Weekly PR", "weekly-pr");
+          if (weeklyPrRows && weeklyPrRows.length > 1) {
+            liveTabCache["Weekly PR"] = weeklyPrRows;
+          }
+        } catch (e) {
+          console.warn("Could not fetch Weekly PR:", e);
+        }
+      }
+
       if (liveTabCache[tabName]) {
         if (datavisContent) {
-          datavisContent.innerHTML = window.FFL_DATA.renderLiveSheetTab(liveTabCache[tabName], visId, tabName);
+          datavisContent.innerHTML = window.FFL_DATA.renderLiveSheetTab(liveTabCache[tabName], visId, tabName, { weeklyPrRows: liveTabCache["Weekly PR"] });
           initTableSorting(datavisContent);
         }
         return;
@@ -494,7 +506,7 @@ document.addEventListener("DOMContentLoaded", () => {
         datavisContent.innerHTML = `
           <div class="vis-view-wrapper">
             <p class="muted-stat" style="padding: 2.5rem; text-align: center;">
-              ⏳ Fetching live data from tab <b>"${tabName}"</b>...
+              ⏳ Loading league data...
             </p>
           </div>
         `;
@@ -505,7 +517,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (rows && rows.length > 1) {
           liveTabCache[tabName] = rows;
           if (activeVisId === visId && datavisContent) {
-            datavisContent.innerHTML = window.FFL_DATA.renderLiveSheetTab(rows, visId, tabName);
+            datavisContent.innerHTML = window.FFL_DATA.renderLiveSheetTab(rows, visId, tabName, { weeklyPrRows: liveTabCache["Weekly PR"] });
             initTableSorting(datavisContent);
           }
           return;

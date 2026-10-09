@@ -10,6 +10,7 @@ const LEAGUE_CONFIG = {
   // Tab names in your Google Sheet matching the 6 views:
   tabNames: {
     powerRankings: "MASTER",
+    weeklyPr: "Weekly PR",
     weeklyPoints: "Weekly Points",
     weeklyRanks: "WeeklyPtRanks",
     expectedRecord: "ExpW-L",
@@ -20,6 +21,7 @@ const LEAGUE_CONFIG = {
   // Direct tab GIDs extracted from published Google Sheet
   tabGids: {
     "power-rankings": "1584196681",
+    "weekly-pr": "1417547424",
     "weekly-points": "1667350132",
     "weekly-ranks": "1430645840",
     "expected-record": "492806340",
@@ -249,8 +251,8 @@ const DEFAULT_LEAGUE_DATA = {
 
   strengthOfSchedule: [
     { rank: 1, team: "Gibbs Me That", manager: "Josh", totalPA: 665.2, avgPA: 133.0, oppAvgRank: 3.2, difficulty: "Gauntlet / Brutal", badgeClass: "diff-brutal" },
-    { rank: 2, team: "Allen Wrench", manager: "Nick", totalPA: 649.3, avgPA: 129.9, oppAvgRank: 4.1, difficulty: "Tuff", badgeClass: "diff-hard" },
-    { rank: 3, team: "Achane Reaction", manager: "Ryan", totalPA: 642.6, avgPA: 128.5, oppAvgRank: 4.6, difficulty: "Hard", badgeClass: "diff-hard" },
+    { rank: 2, team: "Allen Wrench", manager: "Nick", totalPA: 649.3, avgPA: 129.9, oppAvgRank: 4.1, difficulty: "Tuff", badgeClass: "diff-tuff" },
+    { rank: 3, team: "Achane Reaction", manager: "Ryan", totalPA: 642.6, avgPA: 128.5, oppAvgRank: 4.6, difficulty: "Solid", badgeClass: "diff-solid" },
     { rank: 4, team: "Breece Lightning", manager: "Tyler", totalPA: 631.1, avgPA: 126.2, oppAvgRank: 5.2, difficulty: "Above Average", badgeClass: "diff-medium" },
     { rank: 5, team: "Kyler the Creator", manager: "Jordan", totalPA: 620.5, avgPA: 124.1, oppAvgRank: 5.8, difficulty: "Average", badgeClass: "diff-medium" },
     { rank: 6, team: "Hurts So Good", manager: "Dave", totalPA: 618.9, avgPA: 123.8, oppAvgRank: 6.0, difficulty: "Average", badgeClass: "diff-medium" },
@@ -267,12 +269,12 @@ const DEFAULT_LEAGUE_DATA = {
 const DATA_VIS_ITEMS = [
   {
     id: "power-rankings",
-    title: "Master Power Rankings",
+    title: "Power Rankings",
     shortTitle: "Power Rankings",
     icon: "🏆",
     badge: "Official",
     tag: "Leaderboard",
-    description: "Consensus league power rankings, power rating scores, tiers, and weekly trend movement."
+    description: "Dashboard page for league data."
   },
   {
     id: "weekly-points",
@@ -399,29 +401,77 @@ function getScoreGradientStyle(score, minScore, maxScore) {
   return `background: hsla(${hue}, 70%, 18%, 0.45); color: hsl(${hue}, 85%, 72%); border: 1px solid hsla(${hue}, 70%, 42%, 0.4); font-weight: 700; border-radius: 4px; padding: 0.1rem 0.25rem; display: inline-block;`;
 }
 
-// RENDERER 1: MASTER POWER RANKINGS
+// Detailed luck gradient scale for Expected W-L and Power Rankings
+// High positive luck -> glowing emerald, low positive -> soft mint
+// High negative luck -> deep crimson, low negative -> soft coral
+function getLuckGradientStyle(diff, minDiff = -1.5, maxDiff = 1.5) {
+  const d = parseFloat(diff);
+  if (isNaN(d)) return '';
+  if (Math.abs(d) < 0.05) {
+    return 'background: rgba(148, 163, 184, 0.12); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.25);';
+  }
+  if (d > 0) {
+    const max = maxDiff > 0 ? maxDiff : 1.5;
+    const t = Math.min(1, Math.max(0, d / max));
+    const lightness = Math.round(72 + t * 14);
+    const bgAlpha = (0.16 + t * 0.38).toFixed(2);
+    const borderAlpha = (0.28 + t * 0.45).toFixed(2);
+    return `background: hsla(142, 75%, 22%, ${bgAlpha}); color: hsl(142, 85%, ${lightness}%); border: 1px solid hsla(142, 75%, 45%, ${borderAlpha}); font-weight: 700;`;
+  } else {
+    const min = minDiff < 0 ? Math.abs(minDiff) : 1.5;
+    const t = Math.min(1, Math.max(0, Math.abs(d) / min));
+    const lightness = Math.round(72 + t * 14);
+    const bgAlpha = (0.16 + t * 0.38).toFixed(2);
+    const borderAlpha = (0.28 + t * 0.45).toFixed(2);
+    return `background: hsla(0, 75%, 22%, ${bgAlpha}); color: hsl(0, 85%, ${lightness}%); border: 1px solid hsla(0, 75%, 45%, ${borderAlpha}); font-weight: 700;`;
+  }
+}
+
+// Count total weeks at #1 in the "Weekly PR" tab
+function getWeeksAtNumberOne(managerName, weeklyPrRows) {
+  if (!weeklyPrRows || weeklyPrRows.length < 2 || !managerName) return 0;
+  const target = managerName.trim().toLowerCase();
+  for (const r of weeklyPrRows) {
+    if (!r || r.length === 0) continue;
+    const nameCell = (r[0] || '').trim().toLowerCase();
+    if (nameCell === target || nameCell.includes(target) || target.includes(nameCell)) {
+      let count = 0;
+      for (let c = 1; c < r.length; c++) {
+        const val = (r[c] || '').trim();
+        if (val === "1") count++;
+      }
+      return count;
+    }
+  }
+  return 0;
+}
+
+// RENDERER 1: POWER RANKINGS
 function renderPowerRankings(data) {
   const list = data.powerRankings || DEFAULT_LEAGUE_DATA.powerRankings;
   const topTeam = list[0];
-  const biggestMover = [...list].sort((a, b) => b.trend - a.trend)[0];
+  const glowingUp = list.filter((item) => item.trend > 0);
+  const blowingUp = list.filter((item) => item.trend < 0);
 
   return `
     <div class="vis-view-wrapper">
-      <div class="vis-summary-banner">
-        <div class="summary-metric-card">
+      <div class="vis-summary-banner pwr-cards-row">
+        <div class="summary-metric-card pwr-metric-card card-leader">
           <span class="metric-label">Leader</span>
           <span class="metric-val accent">${topTeam.manager}</span>
-          <span class="metric-sub">${topTeam.record} • ${topTeam.powerScore} Rating</span>
+          <span class="metric-sub">3 Weeks at #1</span>
         </div>
-        <div class="summary-metric-card">
-          <span class="metric-label">Top Mover</span>
-          <span class="metric-val">${biggestMover.trend > 0 ? '▲ +' + biggestMover.trend : '—'}</span>
-          <span class="metric-sub">${biggestMover.manager}</span>
+        <div class="summary-metric-card pwr-metric-card card-glowing-up">
+          <span class="metric-label">▲ Glowing Up</span>
+          <div class="metric-list">
+            ${glowingUp.length ? glowingUp.map(m => `<span class="mover-tag up">${m.manager}</span>`).join('') : '<span class="mover-tag none">None</span>'}
+          </div>
         </div>
-        <div class="summary-metric-card">
-          <span class="metric-label">Scoring Avg</span>
-          <span class="metric-val">120.9</span>
-          <span class="metric-sub">Points / Week</span>
+        <div class="summary-metric-card pwr-metric-card card-blowing-up">
+          <span class="metric-label">▼ Blowing Up</span>
+          <div class="metric-list">
+            ${blowingUp.length ? blowingUp.map(m => `<span class="mover-tag down">${m.manager}</span>`).join('') : '<span class="mover-tag none">None</span>'}
+          </div>
         </div>
       </div>
 
@@ -429,13 +479,13 @@ function renderPowerRankings(data) {
         <table class="vis-table">
           <thead>
             <tr>
-              <th class="sticky-col">Manager</th>
-              <th>Rank</th>
+              <th class="sticky-col">MGR</th>
+              <th class="fixed-rank-col">Rank</th>
+              <th class="fixed-trend-col">Trend</th>
               <th>Rec</th>
               <th>PF</th>
               <th>PA</th>
-              <th>Pwr</th>
-              <th>Trend</th>
+              <th class="fixed-rank-col">Pwr</th>
               <th>Tier</th>
             </tr>
           </thead>
@@ -445,12 +495,12 @@ function renderPowerRankings(data) {
               return `
                 <tr>
                   <td class="sticky-col"><span class="team-title-bold">${item.manager}</span></td>
-                  <td><span class="rank-box" style="${getRankGradientStyle(item.rank)}">#${item.rank}</span></td>
+                  <td class="fixed-rank-val"><span class="rank-box" style="${getRankGradientStyle(item.rank)}">#${item.rank}</span></td>
+                  <td class="fixed-trend-val">${trendDisplay}</td>
                   <td><span class="record-badge">${item.record}</span></td>
                   <td class="bold-stat">${item.pf.toFixed(1)}</td>
                   <td class="muted-stat">${item.pa.toFixed(1)}</td>
-                  <td class="accent-text bold-stat">${item.powerScore.toFixed(1)}</td>
-                  <td>${trendDisplay}</td>
+                  <td class="accent-text bold-stat fixed-rank-val">${item.powerScore.toFixed(1)}</td>
                   <td><span class="tier-pill">${item.tier.split(':')[0]}</span></td>
                 </tr>
               `;
@@ -481,33 +531,45 @@ function renderWeeklyPoints(data) {
     max: allAvgs.length ? Math.max(...allAvgs) : 200
   };
 
+  const overallAvg = list.reduce((sum, item) => sum + item.avg, 0) / (list.length || 1);
+  const weekAvgs = weeks.map((w, i) => {
+    const scores = list.map(item => item.scores[i]).filter(s => s > 0);
+    return scores.length ? (scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
+  });
+
   return `
     <div class="vis-view-wrapper">
-      <div class="vis-control-bar">
-        <span class="vis-note">📊 Weekly points scored</span>
-      </div>
-
       <div class="table-responsive-container">
         <table class="vis-table">
           <thead>
             <tr>
-              <th class="sticky-col">Manager</th>
-              <th>Avg</th>
-              ${weeks.map((w, i) => `<th>W${i + 1}</th>`).join('')}
+              <th class="sticky-col">MGR</th>
+              <th class="col-fixed-pts">Avg</th>
+              ${weeks.map((w, i) => `<th class="col-fixed-pts">W${i + 1}</th>`).join('')}
             </tr>
           </thead>
           <tbody>
             ${list.map(item => `
               <tr>
                 <td class="sticky-col"><span class="team-title-bold">${item.manager}</span></td>
-                <td><span style="${getScoreGradientStyle(item.avg, avgMinMax.min, avgMinMax.max)}">${item.avg.toFixed(1)}</span></td>
+                <td class="col-fixed-pts"><span class="score-pill" style="${getScoreGradientStyle(item.avg, avgMinMax.min, avgMinMax.max)}">${item.avg.toFixed(1)}</span></td>
                 ${item.scores.map((s, i) => {
                   const mm = weekMinMax[i] || { min: 0, max: 200 };
-                  return `<td><span style="${getScoreGradientStyle(s, mm.min, mm.max)}">${s.toFixed(1)}</span></td>`;
+                  return `<td class="col-fixed-pts"><span class="score-pill" style="${getScoreGradientStyle(s, mm.min, mm.max)}">${s.toFixed(1)}</span></td>`;
                 }).join('')}
               </tr>
             `).join('')}
           </tbody>
+          <tfoot>
+            <tr class="table-average-row">
+              <td class="sticky-col">Average</td>
+              <td class="col-fixed-pts"><span class="score-pill avg-pill" style="${getScoreGradientStyle(overallAvg, avgMinMax.min, avgMinMax.max)}">${overallAvg.toFixed(1)}</span></td>
+              ${weekAvgs.map((wAvg, i) => {
+                const mm = weekMinMax[i] || { min: 0, max: 200 };
+                return `<td class="col-fixed-pts"><span class="score-pill avg-pill" style="${wAvg > 0 ? getScoreGradientStyle(wAvg, mm.min, mm.max) : ''}">${wAvg > 0 ? wAvg.toFixed(1) : '—'}</span></td>`;
+              }).join('')}
+            </tr>
+          </tfoot>
         </table>
       </div>
     </div>
@@ -521,28 +583,24 @@ function renderWeeklyRanks(data) {
 
   return `
     <div class="vis-view-wrapper">
-      <div class="vis-control-bar">
-        <span class="vis-note">🔢 Scoring rank matrix (1 = Highest Scorer, 14 = Lowest Scorer)</span>
-      </div>
-
       <div class="table-responsive-container">
         <table class="vis-table">
           <thead>
             <tr>
-              <th class="sticky-col">Manager</th>
-              <th>Rank</th>
-              <th>Avg</th>
-              ${weeks.map((w, i) => `<th>W${i + 1}</th>`).join('')}
+              <th class="sticky-col">MGR</th>
+              <th class="fixed-rank-col">Rank</th>
+              <th class="fixed-rank-col">Avg</th>
+              ${weeks.map((w, i) => `<th class="fixed-rank-col">W${i + 1}</th>`).join('')}
             </tr>
           </thead>
           <tbody>
             ${list.map((item, idx) => `
               <tr>
                 <td class="sticky-col"><span class="team-title-bold">${item.manager}</span></td>
-                <td><span class="rank-box" style="${getRankGradientStyle(idx + 1)}">#${idx + 1}</span></td>
-                <td><span class="rank-box-wide" style="${getRankGradientStyle(item.avgRank)}">#${item.avgRank.toFixed(1)}</span></td>
+                <td class="fixed-rank-val"><span class="rank-box" style="${getRankGradientStyle(idx + 1)}">#${idx + 1}</span></td>
+                <td class="fixed-rank-val"><span class="rank-box-wide" style="${getRankGradientStyle(item.avgRank)}">#${item.avgRank.toFixed(1)}</span></td>
                 ${item.ranks.map(r => `
-                  <td>
+                  <td class="fixed-rank-val">
                     <span class="rank-box" style="${getRankGradientStyle(r)}">${r}</span>
                   </td>
                 `).join('')}
@@ -558,19 +616,17 @@ function renderWeeklyRanks(data) {
 // RENDERER 4: EXPECTED W-L RECORD
 function renderExpectedRecord(data) {
   const list = data.expectedRecord || DEFAULT_LEAGUE_DATA.expectedRecord;
+  const minDiff = Math.min(...list.map(i => i.luckDiff));
+  const maxDiff = Math.max(...list.map(i => i.luckDiff));
 
   return `
     <div class="vis-view-wrapper">
-      <div class="vis-control-bar">
-        <span class="vis-note">⚖️ All-Play Expected Record & Luck</span>
-      </div>
-
       <div class="table-responsive-container">
         <table class="vis-table">
           <thead>
             <tr>
-              <th class="sticky-col">Manager</th>
-              <th>Record</th>
+              <th class="sticky-col">MGR</th>
+              <th>REC</th>
               <th>Exp Rec</th>
               <th>Luck</th>
               <th>Status</th>
@@ -579,20 +635,22 @@ function renderExpectedRecord(data) {
             </tr>
           </thead>
           <tbody>
-            ${list.map((item, idx) => {
-              const luckClass = item.luckDiff > 0.5 ? 'luck-lucky' : item.luckDiff < -0.4 ? 'luck-unlucky' : 'luck-neutral';
-              const luckSign = item.luckDiff > 0 ? `+${item.luckDiff.toFixed(1)}` : item.luckDiff.toFixed(1);
+            ${list.map((item) => {
+              const absDiff = Math.abs(item.luckDiff);
+              const status = absDiff < 0.4 ? 'Fair' : item.luckDiff >= 0.7 ? 'Extremely Lucky' : item.luckDiff >= 0.4 ? 'Slightly Lucky' : item.luckDiff <= -0.7 ? 'RIGGED' : 'Bummer';
+              const statusClass = status === 'RIGGED' ? 'status-rigged' : status === 'Bummer' ? 'status-bummer' : status === 'Fair' ? 'status-fair' : 'status-lucky';
+              const luckSign = item.luckDiff > 0 ? `+${item.luckDiff.toFixed(2)}` : item.luckDiff.toFixed(2);
               return `
                 <tr>
                   <td class="sticky-col"><span class="team-title-bold">${item.manager}</span></td>
                   <td><span class="record-badge">${item.actualW}-${item.actualL}</span></td>
                   <td class="bold-stat">${item.expW}-${item.expL}</td>
                   <td>
-                    <span class="luck-badge ${luckClass}">
+                    <span class="luck-badge" style="${getLuckGradientStyle(item.luckDiff, minDiff, maxDiff)}">
                       ${luckSign}
                     </span>
                   </td>
-                  <td><span class="status-pill">${item.status}</span></td>
+                  <td><span class="status-pill ${statusClass}">${status}</span></td>
                   <td>${(item.actualWinPct * 100).toFixed(0)}%</td>
                   <td>${(item.expWinPct * 100).toFixed(0)}%</td>
                 </tr>
@@ -608,44 +666,55 @@ function renderExpectedRecord(data) {
 // RENDERER 5: W-L HEATMAP
 function renderHeatmap(data) {
   const list = data.heatmap || DEFAULT_LEAGUE_DATA.heatmap;
-  const weeks = data.weeks || DEFAULT_LEAGUE_DATA.weeks;
 
   return `
     <div class="vis-view-wrapper">
-      <div class="vis-control-bar">
-        <span class="vis-note">🟩 W-L Heatmap: Weekly scoring ranks for wins & losses</span>
-        <div class="vis-legend">
-          <span class="legend-chip">🔥 Bad Beat (Lost ≤#5)</span>
-          <span class="legend-chip">🍀 Bailout (Won ≥#10)</span>
-        </div>
-      </div>
-
       <div class="table-responsive-container">
         <table class="vis-table heatmap-vis-table">
           <thead>
             <tr>
-              <th class="sticky-col">Manager</th>
-              ${weeks.map((w, i) => `<th>W${i + 1}</th>`).join('')}
+              <th class="sticky-col">MGR</th>
+              <th>REC</th>
+              <th>Wins</th>
+              <th>Losses</th>
+              <th>Avg W</th>
+              <th>Avg L</th>
             </tr>
           </thead>
           <tbody>
-            ${list.map(item => `
-              <tr>
-                <td class="sticky-col"><span class="team-title-bold">${item.manager}</span></td>
-                ${item.weeks.map(w => {
-                  const isWin = w.result === 'W';
-                  const chipClass = isWin ? 'win-chip' : 'loss-chip';
-                  const flag = (isWin && w.rank >= 10) ? '<span class="chip-flag">🍀</span>' : (!isWin && w.rank <= 5) ? '<span class="chip-flag">🔥</span>' : '';
-                  return `
-                    <td>
-                      <span class="heat-chip ${chipClass}">
-                        ${w.rank}${flag}
-                      </span>
-                    </td>
-                  `;
-                }).join('')}
-              </tr>
-            `).join('')}
+            ${list.map(item => {
+              const wins = item.weeks.filter(w => w.result === 'W').map(w => w.rank);
+              const losses = item.weeks.filter(w => w.result === 'L').map(w => w.rank);
+              const avgWin = wins.length ? (wins.reduce((a, b) => a + b, 0) / wins.length).toFixed(2) : '—';
+              const avgLoss = losses.length ? (losses.reduce((a, b) => a + b, 0) / losses.length).toFixed(2) : '—';
+
+              return `
+                <tr>
+                  <td class="sticky-col"><span class="team-title-bold">${item.manager}</span></td>
+                  <td><span class="record-badge">${wins.length}-${losses.length}</span></td>
+                  <td>
+                    <div class="heat-chip-stack">
+                      ${wins.length === 0 ? '<span class="muted-stat">—</span>' : wins.map(w => `
+                        <span class="heat-chip win-chip" title="${w >= 10 ? 'Bailout Win (scoring rank #' + w + ')' : 'Scoring rank #' + w}">
+                          ${w}${w >= 10 ? '<span class="chip-flag">🍀</span>' : ''}
+                        </span>
+                      `).join('')}
+                    </div>
+                  </td>
+                  <td>
+                    <div class="heat-chip-stack">
+                      ${losses.length === 0 ? '<span class="muted-stat">—</span>' : losses.map(l => `
+                        <span class="heat-chip loss-chip" title="${l <= 5 ? 'Bad Beat Loss (scoring rank #' + l + ')' : 'Scoring rank #' + l}">
+                          ${l}${l <= 5 ? '<span class="chip-flag">🔥</span>' : ''}
+                        </span>
+                      `).join('')}
+                    </div>
+                  </td>
+                  <td><span class="rank-box-wide" style="${avgWin !== '—' ? getRankGradientStyle(avgWin) : ''}">${avgWin}</span></td>
+                  <td><span class="rank-box-wide" style="${avgLoss !== '—' ? getRankGradientStyle(avgLoss) : ''}">${avgLoss}</span></td>
+                </tr>
+              `;
+            }).join('')}
           </tbody>
         </table>
       </div>
@@ -659,31 +728,27 @@ function renderStrengthOfSchedule(data) {
 
   return `
     <div class="vis-view-wrapper">
-      <div class="vis-control-bar">
-        <span class="vis-note">🛡️ Schedule Strength</span>
-      </div>
-
       <div class="table-responsive-container">
         <table class="vis-table">
           <thead>
             <tr>
-              <th class="sticky-col">Manager</th>
-              <th>SoS</th>
-              <th>Opp Avg</th>
-              <th>Difficulty</th>
-              <th>Total PA</th>
-              <th>Avg PA</th>
+              <th class="sticky-col">MGR</th>
+              <th class="col-sos-uniform">SoS</th>
+              <th class="col-sos-uniform">Opp Avg</th>
+              <th class="col-sos-strength">Strength</th>
+              <th class="col-sos-uniform">Total PA</th>
+              <th class="col-sos-uniform">Avg PA</th>
             </tr>
           </thead>
           <tbody>
             ${list.map(item => `
               <tr>
                 <td class="sticky-col"><span class="team-title-bold">${item.manager}</span></td>
-                <td><span class="rank-box" style="${getRankGradientStyle(item.rank, true)}">#${item.rank}</span></td>
-                <td><span class="rank-box-wide" style="${getRankGradientStyle(item.oppAvgRank, true)}">#${item.oppAvgRank.toFixed(1)}</span></td>
-                <td><span class="diff-badge ${item.badgeClass}">${item.difficulty}</span></td>
-                <td>${item.totalPA.toFixed(1)}</td>
-                <td>${item.avgPA.toFixed(1)}</td>
+                <td class="col-sos-uniform"><span class="rank-box" style="${getRankGradientStyle(item.rank, true)}">#${item.rank}</span></td>
+                <td class="col-sos-uniform"><span class="rank-box-wide" style="${getRankGradientStyle(item.oppAvgRank, true)}">#${item.oppAvgRank.toFixed(1)}</span></td>
+                <td class="col-sos-strength"><span class="diff-badge ${item.badgeClass}">${item.difficulty}</span></td>
+                <td class="col-sos-uniform">${item.totalPA.toFixed(1)}</td>
+                <td class="col-sos-uniform">${item.avgPA.toFixed(1)}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -694,7 +759,7 @@ function renderStrengthOfSchedule(data) {
 }
 
 // RENDERER 7: DYNAMIC LIVE GOOGLE SHEET TAB RENDERER
-function renderLiveSheetTab(rows, visId, tabName) {
+function renderLiveSheetTab(rows, visId, tabName, extraData = {}) {
   if (!rows || rows.length < 2) {
     return `<div class="vis-view-wrapper"><p class="muted-stat">No data found in tab "${tabName}".</p></div>`;
   }
@@ -736,7 +801,6 @@ function renderLiveSheetTab(rows, visId, tabName) {
 
   // 1. LIVE HEATMAP PARSER (WL Heatmap / WL Heatmap Ordered)
   if (visId === "heatmap") {
-    // Dynamically locate Wins and Losses sections in header row to survive column additions/deletions
     const headerRow = rows.find(r => r.some(c => /wins/i.test(c) && !/avg/i.test(c)) && r.some(c => /losses/i.test(c) && !/avg/i.test(c))) || rows[1] || rows[0] || [];
     const winsCol = headerRow.findIndex(c => /wins/i.test((c || '').trim()) && !/avg/i.test(c));
     const lossesCol = headerRow.findIndex(c => /losses/i.test((c || '').trim()) && !/avg/i.test(c));
@@ -789,23 +853,16 @@ function renderLiveSheetTab(rows, visId, tabName) {
 
       return `
         <div class="vis-view-wrapper">
-          <div class="vis-control-bar">
-            <span class="vis-note">🟢 Live data from tab <b>"${tabName}"</b></span>
-            <div class="vis-legend">
-              <span class="legend-chip">🔥 Bad Beat (Lost ≤#5)</span>
-              <span class="legend-chip">🍀 Bailout (Won ≥#10)</span>
-            </div>
-          </div>
           <div class="table-responsive-container">
             <table class="vis-table heatmap-vis-table">
               <thead>
                 <tr>
-                  <th class="sticky-col">Manager</th>
-                  <th>Record</th>
-                  <th>Avg W</th>
-                  <th>Avg L</th>
+                  <th class="sticky-col">MGR</th>
+                  <th>REC</th>
                   <th>Wins</th>
                   <th>Losses</th>
+                  <th>Avg W</th>
+                  <th>Avg L</th>
                 </tr>
               </thead>
               <tbody>
@@ -813,8 +870,6 @@ function renderLiveSheetTab(rows, visId, tabName) {
                   <tr>
                     <td class="sticky-col"><span class="team-title-bold">${item.manager}</span></td>
                     <td><span class="record-badge">${item.record}</span></td>
-                    <td><span class="rank-box-wide" style="${item.avgWin !== '—' ? getRankGradientStyle(item.avgWin) : ''}">${item.avgWin}</span></td>
-                    <td><span class="rank-box-wide" style="${item.avgLoss !== '—' ? getRankGradientStyle(item.avgLoss) : ''}">${item.avgLoss}</span></td>
                     <td>
                       <div class="heat-chip-stack">
                         ${item.wins.length === 0 ? '<span class="muted-stat">—</span>' : item.wins.map(w => `
@@ -833,6 +888,8 @@ function renderLiveSheetTab(rows, visId, tabName) {
                         `).join('')}
                       </div>
                     </td>
+                    <td><span class="rank-box-wide" style="${item.avgWin !== '—' ? getRankGradientStyle(item.avgWin) : ''}">${item.avgWin}</span></td>
+                    <td><span class="rank-box-wide" style="${item.avgLoss !== '—' ? getRankGradientStyle(item.avgLoss) : ''}">${item.avgLoss}</span></td>
                   </tr>
                 `).join('')}
               </tbody>
@@ -902,37 +959,46 @@ function renderLiveSheetTab(rows, visId, tabName) {
     if (pwrRows.length > 0) {
       pwrRows.sort((a, b) => a.rank - b.rank);
 
+      const weeksAtOne = getWeeksAtNumberOne(pwrRows[0].manager, extraData && extraData.weeklyPrRows);
+      const isPositiveTrend = (t) => t === '▲' || t === '➚' || (typeof t === 'number' && t > 0) || (typeof t === 'string' && (t.includes('▲') || t.includes('➚') || t.startsWith('+')));
+      const isNegativeTrend = (t) => t === '▼' || t === '➘' || (typeof t === 'number' && t < 0) || (typeof t === 'string' && (t.includes('▼') || t.includes('➘') || (t.startsWith('-') && t !== '—' && t !== '-')));
+
+      const glowingUp = pwrRows.filter(r => isPositiveTrend(r.trend));
+      const blowingUp = pwrRows.filter(r => isNegativeTrend(r.trend));
+
       return `
         <div class="vis-view-wrapper">
-          <div class="vis-summary-banner">
-            <div class="summary-metric-card">
+          <div class="vis-summary-banner pwr-cards-row">
+            <div class="summary-metric-card pwr-metric-card card-leader">
               <span class="metric-label">Leader</span>
               <span class="metric-val accent">${pwrRows[0].manager}</span>
-              <span class="metric-sub">${pwrRows[0].record} • ${pwrRows[0].pwrScore} Pwr</span>
+              <span class="metric-sub">${weeksAtOne} ${weeksAtOne === 1 ? 'Week' : 'Weeks'} at #1</span>
             </div>
-            <div class="summary-metric-card">
-              <span class="metric-label">Top PPG</span>
-              <span class="metric-val">${pwrRows[0].ppg.toFixed(1)}</span>
-              <span class="metric-sub">Points / Week</span>
+            <div class="summary-metric-card pwr-metric-card card-glowing-up">
+              <span class="metric-label">▲ Glowing Up</span>
+              <div class="metric-list">
+                ${glowingUp.length ? glowingUp.map(m => `<span class="mover-tag up">${m.manager}</span>`).join('') : '<span class="mover-tag none">None</span>'}
+              </div>
             </div>
-            <div class="summary-metric-card">
-              <span class="metric-label">Scoring Avg</span>
-              <span class="metric-val">${(pwrRows.reduce((sum, r) => sum + r.ppg, 0) / (pwrRows.length || 1)).toFixed(1)}</span>
-              <span class="metric-sub">Points / Week</span>
+            <div class="summary-metric-card pwr-metric-card card-blowing-up">
+              <span class="metric-label">▼ Blowing Up</span>
+              <div class="metric-list">
+                ${blowingUp.length ? blowingUp.map(m => `<span class="mover-tag down">${m.manager}</span>`).join('') : '<span class="mover-tag none">None</span>'}
+              </div>
             </div>
           </div>
           <div class="table-responsive-container">
             <table class="vis-table">
               <thead>
                 <tr>
-                  <th class="sticky-col">Manager</th>
-                  <th>Rank</th>
+                  <th class="sticky-col">MGR</th>
+                  <th class="fixed-rank-col">Rank</th>
+                  <th class="fixed-trend-col">Trend</th>
                   <th>Rec</th>
                   <th>Pwr</th>
                   <th>PPG</th>
-                  <th>Trend</th>
-                  <th>Avg Rnk</th>
-                  <th>SoS</th>
+                  <th class="fixed-rank-col">Avg Rnk</th>
+                  <th class="fixed-rank-col">SoS</th>
                   <th>Luck</th>
                 </tr>
               </thead>
@@ -940,19 +1006,18 @@ function renderLiveSheetTab(rows, visId, tabName) {
                 ${pwrRows.map(item => {
                   const trendDisplay = item.trend === '➚' ? '<span class="trend-up">▲</span>' : item.trend === '➘' ? '<span class="trend-down">▼</span>' : '<span class="trend-even">➟</span>';
                   const luckVal = parseFloat(item.luck) || 0;
-                  const luckClass = luckVal > 0 ? 'luck-lucky' : luckVal < 0 ? 'luck-unlucky' : 'luck-neutral';
                   const luckDisplay = item.luck ? (luckVal > 0 ? '+' : '') + item.luck : '—';
                   return `
                     <tr>
                       <td class="sticky-col"><span class="team-title-bold">${item.manager}</span></td>
-                      <td><span class="rank-box" style="${getRankGradientStyle(item.rank)}">#${item.rank}</span></td>
+                      <td class="fixed-rank-val"><span class="rank-box" style="${getRankGradientStyle(item.rank)}">#${item.rank}</span></td>
+                      <td class="fixed-trend-val">${trendDisplay}</td>
                       <td><span class="record-badge">${item.record}</span></td>
                       <td class="accent-text bold-stat">${item.pwrScore}</td>
                       <td class="bold-stat">${item.ppg.toFixed(1)}</td>
-                      <td>${trendDisplay}</td>
-                      <td><span class="rank-box-wide" style="${getRankGradientStyle(item.avgRank)}">#${item.avgRank}</span></td>
-                      <td><span class="rank-box-wide" style="${getRankGradientStyle(item.sosRank)}">#${item.sosRank}</span></td>
-                      <td><span class="luck-badge ${luckClass}">${luckDisplay}</span></td>
+                      <td class="fixed-rank-val"><span class="rank-box-wide" style="${getRankGradientStyle(item.avgRank)}">#${item.avgRank}</span></td>
+                      <td class="fixed-rank-val"><span class="rank-box-wide" style="${getRankGradientStyle(item.sosRank)}">#${item.sosRank}</span></td>
+                      <td><span class="luck-badge" style="${getLuckGradientStyle(luckVal)}">${luckDisplay}</span></td>
                     </tr>
                   `;
                 }).join('')}
@@ -1025,32 +1090,45 @@ function renderLiveSheetTab(rows, visId, tabName) {
         max: allAvgs.length ? Math.max(...allAvgs) : 200
       };
 
+      const overallAvg = ptsRows.reduce((sum, item) => sum + item.avg, 0) / (ptsRows.length || 1);
+      const weekAvgScores = activeWeeks.map((w, wIdx) => {
+        const scores = ptsRows.map(r => r.scores[wIdx]).filter(s => s > 0);
+        return scores.length ? (scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
+      });
+
       return `
         <div class="vis-view-wrapper">
-          <div class="vis-control-bar">
-            <span class="vis-note">🟢 Live points from tab <b>"${tabName}"</b></span>
-          </div>
           <div class="table-responsive-container">
             <table class="vis-table">
               <thead>
                 <tr>
-                  <th class="sticky-col">Manager</th>
-                  <th>Avg</th>
-                  ${activeWeeks.map(w => `<th>${w.label}</th>`).join('')}
+                  <th class="sticky-col">MGR</th>
+                  <th class="col-fixed-pts">Avg</th>
+                  ${activeWeeks.map(w => `<th class="col-fixed-pts">${w.label}</th>`).join('')}
                 </tr>
               </thead>
               <tbody>
                 ${ptsRows.map(item => `
                   <tr>
                     <td class="sticky-col"><span class="team-title-bold">${item.manager}</span></td>
-                    <td><span style="${getScoreGradientStyle(item.avg, avgMinMax.min, avgMinMax.max)}">${item.avg.toFixed(1)}</span></td>
+                    <td class="col-fixed-pts"><span class="score-pill" style="${getScoreGradientStyle(item.avg, avgMinMax.min, avgMinMax.max)}">${item.avg.toFixed(1)}</span></td>
                     ${item.scores.map((s, wIdx) => {
                       const mm = weekMinMax[wIdx] || { min: 0, max: 200 };
-                      return `<td><span style="${getScoreGradientStyle(s, mm.min, mm.max)}">${s.toFixed(1)}</span></td>`;
+                      return `<td class="col-fixed-pts"><span class="score-pill" style="${getScoreGradientStyle(s, mm.min, mm.max)}">${s > 0 ? s.toFixed(1) : '—'}</span></td>`;
                     }).join('')}
                   </tr>
                 `).join('')}
               </tbody>
+              <tfoot>
+                <tr class="table-average-row">
+                  <td class="sticky-col">Average</td>
+                  <td class="col-fixed-pts"><span class="score-pill avg-pill" style="${getScoreGradientStyle(overallAvg, avgMinMax.min, avgMinMax.max)}">${overallAvg.toFixed(1)}</span></td>
+                  ${weekAvgScores.map((wAvg, wIdx) => {
+                    const mm = weekMinMax[wIdx] || { min: 0, max: 200 };
+                    return `<td class="col-fixed-pts"><span class="score-pill avg-pill" style="${wAvg > 0 ? getScoreGradientStyle(wAvg, mm.min, mm.max) : ''}">${wAvg > 0 ? wAvg.toFixed(1) : '—'}</span></td>`;
+                  }).join('')}
+                </tr>
+              </tfoot>
             </table>
           </div>
         </div>
@@ -1100,26 +1178,23 @@ function renderLiveSheetTab(rows, visId, tabName) {
 
       return `
         <div class="vis-view-wrapper">
-          <div class="vis-control-bar">
-            <span class="vis-note">🟢 Live scoring ranks from tab <b>"${tabName}"</b></span>
-          </div>
           <div class="table-responsive-container">
             <table class="vis-table">
               <thead>
                 <tr>
-                  <th class="sticky-col">Manager</th>
-                  <th>Rank</th>
-                  <th>Avg</th>
-                  ${activeWeeks.map(w => `<th>${w.label}</th>`).join('')}
+                  <th class="sticky-col">MGR</th>
+                  <th class="fixed-rank-col">Rank</th>
+                  <th class="fixed-rank-col">Avg</th>
+                  ${activeWeeks.map(w => `<th class="fixed-rank-col">${w.label}</th>`).join('')}
                 </tr>
               </thead>
               <tbody>
                 ${rnkRows.map(item => `
                   <tr>
                     <td class="sticky-col"><span class="team-title-bold">${item.manager}</span></td>
-                    <td><span class="rank-box" style="${getRankGradientStyle(item.seasonRank)}">#${item.seasonRank}</span></td>
-                    <td><span class="rank-box-wide" style="${getRankGradientStyle(item.avg)}">#${item.avg}</span></td>
-                    ${item.ranks.map(r => `<td><span class="rank-box" style="${getRankGradientStyle(r)}">${r}</span></td>`).join('')}
+                    <td class="fixed-rank-val"><span class="rank-box" style="${getRankGradientStyle(item.seasonRank)}">#${item.seasonRank}</span></td>
+                    <td class="fixed-rank-val"><span class="rank-box-wide" style="${getRankGradientStyle(item.avg)}">#${item.avg}</span></td>
+                    ${item.ranks.map(r => `<td class="fixed-rank-val"><span class="rank-box" style="${getRankGradientStyle(r)}">${r}</span></td>`).join('')}
                   </tr>
                 `).join('')}
               </tbody>
@@ -1151,8 +1226,9 @@ function renderLiveSheetTab(rows, visId, tabName) {
       const actualWinPct = actualTotal > 0 ? (actualW / actualTotal) : 0;
       const expWinPct = expTotal > 0 ? (expW / expTotal) : 0;
 
-      const luckClass = diff >= 0.2 ? 'luck-lucky' : diff <= -0.2 ? 'luck-unlucky' : 'luck-neutral';
-      const status = diff >= 0.7 ? 'Extremely Lucky' : diff >= 0.2 ? 'Slightly Lucky' : diff <= -0.7 ? 'RIGGED' : diff <= -0.2 ? 'Tough Luck' : 'Fair';
+      const absDiff = Math.abs(diff);
+      const status = absDiff < 0.4 ? 'Fair' : diff >= 0.7 ? 'Extremely Lucky' : diff >= 0.4 ? 'Slightly Lucky' : diff <= -0.7 ? 'RIGGED' : 'Bummer';
+      const statusClass = status === 'RIGGED' ? 'status-rigged' : status === 'Bummer' ? 'status-bummer' : status === 'Fair' ? 'status-fair' : 'status-lucky';
 
       expRows.push({
         manager: mgr.name,
@@ -1163,25 +1239,25 @@ function renderLiveSheetTab(rows, visId, tabName) {
         diff,
         actualWinPct,
         expWinPct,
-        luckClass,
-        status
+        status,
+        statusClass
       });
     }
 
     if (expRows.length > 0) {
       expRows.sort((a, b) => b.diff - a.diff);
 
+      const minDiff = Math.min(...expRows.map(r => r.diff));
+      const maxDiff = Math.max(...expRows.map(r => r.diff));
+
       return `
         <div class="vis-view-wrapper">
-          <div class="vis-control-bar">
-            <span class="vis-note">🟢 Live data from tab <b>"${tabName}"</b> • All-Play Expected Record & Luck</span>
-          </div>
           <div class="table-responsive-container">
             <table class="vis-table">
               <thead>
                 <tr>
-                  <th class="sticky-col">Manager</th>
-                  <th>Record</th>
+                  <th class="sticky-col">MGR</th>
+                  <th>REC</th>
                   <th>Exp Rec</th>
                   <th>Luck</th>
                   <th>Status</th>
@@ -1196,11 +1272,11 @@ function renderLiveSheetTab(rows, visId, tabName) {
                     <td><span class="record-badge">${item.actualW}-${item.actualL}</span></td>
                     <td class="bold-stat">${item.expW.toFixed(2)}-${item.expL.toFixed(2)}</td>
                     <td>
-                      <span class="luck-badge ${item.luckClass}">
+                      <span class="luck-badge" style="${getLuckGradientStyle(item.diff, minDiff, maxDiff)}">
                         ${item.diff > 0 ? '+' : ''}${item.diff.toFixed(2)}
                       </span>
                     </td>
-                    <td><span class="status-pill ${item.status === 'RIGGED' ? 'status-rigged' : ''}">${item.status}</span></td>
+                    <td><span class="status-pill ${item.statusClass}">${item.status}</span></td>
                     <td>${(item.actualWinPct * 100).toFixed(0)}%</td>
                     <td>${(item.expWinPct * 100).toFixed(0)}%</td>
                   </tr>
@@ -1242,8 +1318,8 @@ function renderLiveSheetTab(rows, visId, tabName) {
       let avgOppRank = parseFloat(r[idx + 1]) || 7.0;
       const oppRanks = activeWeeks.map(w => parseInt(r[w.col], 10) || 0);
 
-      const diffLabel = avgOppRank <= 4.0 ? 'Brutal' : avgOppRank <= 6.0 ? 'Tuff' : avgOppRank <= 7.5 ? 'Hard' : avgOppRank <= 9.0 ? 'Average' : 'Soft';
-      const diffBadge = avgOppRank <= 4.0 ? 'diff-brutal' : avgOppRank <= 7.5 ? 'diff-hard' : avgOppRank <= 9.0 ? 'diff-medium' : 'diff-soft';
+      const diffLabel = avgOppRank <= 4.0 ? 'Brutal' : avgOppRank <= 6.0 ? 'Tuff' : avgOppRank <= 7.5 ? 'Solid' : avgOppRank <= 9.0 ? 'Average' : 'Soft';
+      const diffBadge = avgOppRank <= 4.0 ? 'diff-brutal' : avgOppRank <= 6.0 ? 'diff-tuff' : avgOppRank <= 7.5 ? 'diff-solid' : avgOppRank <= 9.0 ? 'diff-medium' : 'diff-soft';
 
       sosRows.push({
         sosRank,
@@ -1260,28 +1336,25 @@ function renderLiveSheetTab(rows, visId, tabName) {
 
       return `
         <div class="vis-view-wrapper">
-          <div class="vis-control-bar">
-            <span class="vis-note">🟢 Live Schedule Strength from tab <b>"${tabName}"</b></span>
-          </div>
           <div class="table-responsive-container">
             <table class="vis-table">
               <thead>
                 <tr>
-                  <th class="sticky-col">Manager</th>
-                  <th>SoS</th>
-                  <th>Opp Avg</th>
-                  <th>Difficulty</th>
-                  ${activeWeeks.map(w => `<th>${w.label}</th>`).join('')}
+                  <th class="sticky-col">MGR</th>
+                  <th class="col-sos-uniform">SoS</th>
+                  <th class="col-sos-uniform">Opp Avg</th>
+                  <th class="col-sos-strength">Strength</th>
+                  ${activeWeeks.map(w => `<th class="col-sos-uniform">${w.label}</th>`).join('')}
                 </tr>
               </thead>
               <tbody>
                 ${sosRows.map(item => `
                   <tr>
                     <td class="sticky-col"><span class="team-title-bold">${item.manager}</span></td>
-                    <td><span class="rank-box" style="${getRankGradientStyle(item.sosRank, true)}">#${item.sosRank}</span></td>
-                    <td><span class="rank-box-wide" style="${getRankGradientStyle(item.avgOppRank, true)}">#${item.avgOppRank.toFixed(2)}</span></td>
-                    <td><span class="diff-badge ${item.diffBadge}">${item.diffLabel}</span></td>
-                    ${item.oppRanks.map(r => `<td><span class="rank-box" style="${getRankGradientStyle(r, true)}">${r}</span></td>`).join('')}
+                    <td class="col-sos-uniform"><span class="rank-box" style="${getRankGradientStyle(item.sosRank, true)}">#${item.sosRank}</span></td>
+                    <td class="col-sos-uniform"><span class="rank-box-wide" style="${getRankGradientStyle(item.avgOppRank, true)}">#${item.avgOppRank.toFixed(2)}</span></td>
+                    <td class="col-sos-strength"><span class="diff-badge ${item.diffBadge}">${item.diffLabel}</span></td>
+                    ${item.oppRanks.map(r => `<td class="col-sos-uniform"><span class="rank-box" style="${getRankGradientStyle(r, true)}">${r}</span></td>`).join('')}
                   </tr>
                 `).join('')}
               </tbody>
@@ -1299,14 +1372,14 @@ function renderLiveSheetTab(rows, visId, tabName) {
 
   return `
     <div class="vis-view-wrapper">
-      <div class="vis-control-bar">
-        <span class="vis-note">🟢 Live data from tab <b>"${tabName}"</b> (${dataRows.length} rows)</span>
-      </div>
       <div class="table-responsive-container">
         <table class="vis-table">
           <thead>
             <tr>
-              ${headers.map((h, i) => `<th class="${i === 0 ? 'sticky-col' : ''}">${h || 'Col ' + (i + 1)}</th>`).join('')}
+              ${headers.map((h, i) => {
+                const headerText = /manager/i.test(h || '') ? 'MGR' : (h || 'Col ' + (i + 1));
+                return `<th class="${i === 0 ? 'sticky-col' : ''}">${headerText}</th>`;
+              }).join('')}
             </tr>
           </thead>
           <tbody>
