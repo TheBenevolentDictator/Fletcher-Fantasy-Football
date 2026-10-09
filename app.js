@@ -477,7 +477,8 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     const tabKey = tabKeyMap[visId];
-    const tabName = window.FFL_DATA.config.tabNames[tabKey];
+    const tabName = (window.FFL_DATA.config && window.FFL_DATA.config.tabNames) ? window.FFL_DATA.config.tabNames[tabKey] : "";
+    const savedSheetId = localStorage.getItem("ffl_sheet_id") || (window.FFL_DATA && window.FFL_DATA.config ? window.FFL_DATA.config.sheetId : "");
 
     // If Google Sheet is connected, try to render live data
     if (savedSheetId && tabName) {
