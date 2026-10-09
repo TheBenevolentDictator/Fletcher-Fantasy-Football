@@ -632,7 +632,7 @@ function renderExpectedRecord(data) {
               <th>REC</th>
               <th>Exp Rec</th>
               <th>Luck</th>
-              <th>Status</th>
+              <th class="col-status-fixed">Status</th>
               <th>Win%</th>
               <th>Exp%</th>
             </tr>
@@ -640,8 +640,8 @@ function renderExpectedRecord(data) {
           <tbody>
             ${list.map((item) => {
               const absDiff = Math.abs(item.luckDiff);
-              const status = absDiff < 0.4 ? 'Fair' : item.luckDiff >= 0.7 ? 'Extremely Lucky' : item.luckDiff >= 0.4 ? 'Slightly Lucky' : item.luckDiff <= -0.7 ? 'RIGGED' : 'Bummer';
-              const statusClass = status === 'RIGGED' ? 'status-rigged' : status === 'Bummer' ? 'status-bummer' : status === 'Fair' ? 'status-fair' : 'status-lucky';
+              const status = absDiff < 0.4 ? 'Fair' : item.luckDiff >= 0.7 ? 'RIGGED' : item.luckDiff >= 0.4 ? 'Noice' : item.luckDiff <= -0.7 ? 'RIGGED' : 'Bummer';
+              const statusClass = (status === 'RIGGED' && item.luckDiff >= 0.7) ? 'status-rigged-lucky' : (status === 'RIGGED') ? 'status-rigged-unlucky' : status === 'Noice' ? 'status-noice' : status === 'Bummer' ? 'status-bummer' : 'status-fair';
               const luckSign = item.luckDiff > 0 ? `+${item.luckDiff.toFixed(2)}` : item.luckDiff.toFixed(2);
               return `
                 <tr>
@@ -653,7 +653,7 @@ function renderExpectedRecord(data) {
                       ${luckSign}
                     </span>
                   </td>
-                  <td><span class="status-pill ${statusClass}">${status}</span></td>
+                  <td class="col-status-fixed"><span class="status-pill ${statusClass}">${status}</span></td>
                   <td>${(item.actualWinPct * 100).toFixed(0)}%</td>
                   <td>${(item.expWinPct * 100).toFixed(0)}%</td>
                 </tr>
@@ -1229,8 +1229,8 @@ function renderLiveSheetTab(rows, visId, tabName, extraData = {}) {
       const expWinPct = expTotal > 0 ? (expW / expTotal) : 0;
 
       const absDiff = Math.abs(diff);
-      const status = absDiff < 0.4 ? 'Fair' : diff >= 0.7 ? 'Extremely Lucky' : diff >= 0.4 ? 'Slightly Lucky' : diff <= -0.7 ? 'RIGGED' : 'Bummer';
-      const statusClass = status === 'RIGGED' ? 'status-rigged' : status === 'Bummer' ? 'status-bummer' : status === 'Fair' ? 'status-fair' : 'status-lucky';
+      const status = absDiff < 0.4 ? 'Fair' : diff >= 0.7 ? 'RIGGED' : diff >= 0.4 ? 'Noice' : diff <= -0.7 ? 'RIGGED' : 'Bummer';
+      const statusClass = (status === 'RIGGED' && diff >= 0.7) ? 'status-rigged-lucky' : (status === 'RIGGED') ? 'status-rigged-unlucky' : status === 'Noice' ? 'status-noice' : status === 'Bummer' ? 'status-bummer' : 'status-fair';
 
       expRows.push({
         manager: mgr.name,
@@ -1262,7 +1262,7 @@ function renderLiveSheetTab(rows, visId, tabName, extraData = {}) {
                   <th>REC</th>
                   <th>Exp Rec</th>
                   <th>Luck</th>
-                  <th>Status</th>
+                  <th class="col-status-fixed">Status</th>
                   <th>Win%</th>
                   <th>Exp%</th>
                 </tr>
@@ -1278,7 +1278,7 @@ function renderLiveSheetTab(rows, visId, tabName, extraData = {}) {
                         ${item.diff > 0 ? '+' : ''}${item.diff.toFixed(2)}
                       </span>
                     </td>
-                    <td><span class="status-pill ${item.statusClass}">${item.status}</span></td>
+                    <td class="col-status-fixed"><span class="status-pill ${item.statusClass}">${item.status}</span></td>
                     <td>${(item.actualWinPct * 100).toFixed(0)}%</td>
                     <td>${(item.expWinPct * 100).toFixed(0)}%</td>
                   </tr>
