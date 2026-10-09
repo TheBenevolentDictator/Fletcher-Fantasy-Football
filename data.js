@@ -484,12 +484,7 @@ function renderWeeklyPoints(data) {
   return `
     <div class="vis-view-wrapper">
       <div class="vis-control-bar">
-        <span class="vis-note">📊 Weekly points scored (Percentile Gradient)</span>
-        <div class="vis-legend">
-          <span class="legend-chip"><span class="chip-color rank-top-chip"></span> 100th %ile (Green)</span>
-          <span class="legend-chip"><span class="chip-color rank-mid-chip"></span> 50th %ile (Yellow)</span>
-          <span class="legend-chip"><span class="chip-color rank-bot-chip"></span> 0th %ile (Red)</span>
-        </div>
+        <span class="vis-note">📊 Weekly points scored</span>
       </div>
 
       <div class="table-responsive-container">
@@ -528,11 +523,6 @@ function renderWeeklyRanks(data) {
     <div class="vis-view-wrapper">
       <div class="vis-control-bar">
         <span class="vis-note">🔢 Scoring rank matrix (1 = Highest Scorer, 14 = Lowest Scorer)</span>
-        <div class="vis-legend">
-          <span class="legend-chip"><span class="chip-color rank-top-chip"></span> #1 Best</span>
-          <span class="legend-chip"><span class="chip-color rank-mid-chip"></span> #7 Mid</span>
-          <span class="legend-chip"><span class="chip-color rank-bot-chip"></span> #14 Worst</span>
-        </div>
       </div>
 
       <div class="table-responsive-container">
@@ -625,15 +615,13 @@ function renderHeatmap(data) {
       <div class="vis-control-bar">
         <span class="vis-note">🟩 W-L Heatmap: Weekly scoring ranks for wins & losses</span>
         <div class="vis-legend">
-          <span class="legend-chip"><span class="chip-color heatmap-win-chip"></span> Win</span>
-          <span class="legend-chip"><span class="chip-color heatmap-loss-chip"></span> Loss</span>
           <span class="legend-chip">🔥 Bad Beat (Lost ≤#5)</span>
           <span class="legend-chip">🍀 Bailout (Won ≥#10)</span>
         </div>
       </div>
 
       <div class="table-responsive-container">
-        <table class="vis-table">
+        <table class="vis-table heatmap-vis-table">
           <thead>
             <tr>
               <th class="sticky-col">Manager</th>
@@ -672,12 +660,7 @@ function renderStrengthOfSchedule(data) {
   return `
     <div class="vis-view-wrapper">
       <div class="vis-control-bar">
-        <span class="vis-note">🛡️ Schedule Strength (Inverted: #1 Hardest Red ➔ #14 Easiest Green)</span>
-        <div class="vis-legend">
-          <span class="legend-chip"><span class="chip-color rank-bot-chip"></span> #1 Hardest</span>
-          <span class="legend-chip"><span class="chip-color rank-mid-chip"></span> #7 Mid</span>
-          <span class="legend-chip"><span class="chip-color rank-top-chip"></span> #14 Easiest</span>
-        </div>
+        <span class="vis-note">🛡️ Schedule Strength</span>
       </div>
 
       <div class="table-responsive-container">
@@ -809,14 +792,12 @@ function renderLiveSheetTab(rows, visId, tabName) {
           <div class="vis-control-bar">
             <span class="vis-note">🟢 Live data from tab <b>"${tabName}"</b></span>
             <div class="vis-legend">
-              <span class="legend-chip"><span class="chip-color heatmap-win-chip"></span> Win</span>
-              <span class="legend-chip"><span class="chip-color heatmap-loss-chip"></span> Loss</span>
               <span class="legend-chip">🔥 Bad Beat (Lost ≤#5)</span>
               <span class="legend-chip">🍀 Bailout (Won ≥#10)</span>
             </div>
           </div>
           <div class="table-responsive-container">
-            <table class="vis-table">
+            <table class="vis-table heatmap-vis-table">
               <thead>
                 <tr>
                   <th class="sticky-col">Manager</th>
@@ -1047,12 +1028,7 @@ function renderLiveSheetTab(rows, visId, tabName) {
       return `
         <div class="vis-view-wrapper">
           <div class="vis-control-bar">
-            <span class="vis-note">🟢 Live points from tab <b>"${tabName}"</b> (Percentile Gradient)</span>
-            <div class="vis-legend">
-              <span class="legend-chip"><span class="chip-color rank-top-chip"></span> 100th %ile (Green)</span>
-              <span class="legend-chip"><span class="chip-color rank-mid-chip"></span> 50th %ile (Yellow)</span>
-              <span class="legend-chip"><span class="chip-color rank-bot-chip"></span> 0th %ile (Red)</span>
-            </div>
+            <span class="vis-note">🟢 Live points from tab <b>"${tabName}"</b></span>
           </div>
           <div class="table-responsive-container">
             <table class="vis-table">
@@ -1125,12 +1101,7 @@ function renderLiveSheetTab(rows, visId, tabName) {
       return `
         <div class="vis-view-wrapper">
           <div class="vis-control-bar">
-            <span class="vis-note">🟢 Live scoring ranks from tab <b>"${tabName}"</b> (1-14 Gradient Scale)</span>
-            <div class="vis-legend">
-              <span class="legend-chip"><span class="chip-color rank-top-chip"></span> #1 Best</span>
-              <span class="legend-chip"><span class="chip-color rank-mid-chip"></span> #7 Mid</span>
-              <span class="legend-chip"><span class="chip-color rank-bot-chip"></span> #14 Worst</span>
-            </div>
+            <span class="vis-note">🟢 Live scoring ranks from tab <b>"${tabName}"</b></span>
           </div>
           <div class="table-responsive-container">
             <table class="vis-table">
@@ -1290,12 +1261,7 @@ function renderLiveSheetTab(rows, visId, tabName) {
       return `
         <div class="vis-view-wrapper">
           <div class="vis-control-bar">
-            <span class="vis-note">🟢 Live Schedule Strength from tab <b>"${tabName}"</b> (Inverted: #1 Hardest Red ➔ #14 Easiest Green)</span>
-            <div class="vis-legend">
-              <span class="legend-chip"><span class="chip-color rank-bot-chip"></span> #1 Hardest</span>
-              <span class="legend-chip"><span class="chip-color rank-mid-chip"></span> #7 Mid</span>
-              <span class="legend-chip"><span class="chip-color rank-top-chip"></span> #14 Easiest</span>
-            </div>
+            <span class="vis-note">🟢 Live Schedule Strength from tab <b>"${tabName}"</b></span>
           </div>
           <div class="table-responsive-container">
             <table class="vis-table">

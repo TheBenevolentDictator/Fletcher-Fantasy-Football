@@ -40,7 +40,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const sheetStatusIndicator = document.getElementById("sheet-status-indicator");
 
   // State
-  let currentSection = "decks"; // "decks" | "datavis"
+  let currentSection = "datavis"; // "decks" | "datavis"
   let deckItems = [];
   let selectedDeckIndex = 0;
   let activeVisId = "power-rankings";
@@ -66,19 +66,31 @@ document.addEventListener("DOMContentLoaded", () => {
     return currentSection === "decks" ? frameContainer : datavisStage;
   }
 
+  function updateFullscreenBtnText(isFullscreen) {
+    if (fsBtn) {
+      fsBtn.innerHTML = isFullscreen ? "✕ Exit Fullscreen" : "⛶ Fullscreen";
+      fsBtn.title = isFullscreen ? "Exit Fullscreen Mode" : "Enter Fullscreen Mode";
+    }
+  }
+
   function toggleFullscreen() {
     const target = getActiveContainer();
     if (!target) return;
 
-    if (target.classList.contains("pseudo-fullscreen")) {
+    const isPseudo = target.classList.contains("pseudo-fullscreen");
+    const isNative = Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+    if (isPseudo || isNative) {
       exitFullscreen();
       return;
     }
 
     if (target.requestFullscreen) {
-      target.requestFullscreen().catch(() => enterPseudoFullscreen(target));
+      target.requestFullscreen()
+        .then(() => updateFullscreenBtnText(true))
+        .catch(() => enterPseudoFullscreen(target));
     } else if (target.webkitRequestFullscreen) {
       target.webkitRequestFullscreen();
+      updateFullscreenBtnText(true);
     } else {
       enterPseudoFullscreen(target);
     }
@@ -87,12 +99,13 @@ document.addEventListener("DOMContentLoaded", () => {
   function enterPseudoFullscreen(target) {
     target.classList.add("pseudo-fullscreen");
     document.body.style.overflow = "hidden";
+    updateFullscreenBtnText(true);
   }
 
   function exitFullscreen() {
     if (document.fullscreenElement || document.webkitFullscreenElement) {
       if (document.exitFullscreen) {
-        document.exitFullscreen();
+        document.exitFullscreen().catch(() => {});
       } else if (document.webkitExitFullscreen) {
         document.webkitExitFullscreen();
       }
@@ -100,6 +113,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (frameContainer) frameContainer.classList.remove("pseudo-fullscreen");
     if (datavisStage) datavisStage.classList.remove("pseudo-fullscreen");
     document.body.style.overflow = "";
+    updateFullscreenBtnText(false);
   }
 
   if (fsBtn) {
@@ -109,18 +123,30 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  if (fsCloseBtn) {
-    fsCloseBtn.addEventListener("click", (e) => {
+  // Handle all floating close buttons
+  document.querySelectorAll(".fs-close-btn").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
       e.stopPropagation();
       exitFullscreen();
     });
-  }
+  });
 
-  document.addEventListener("fullscreenchange", () => {
-    if (!document.fullscreenElement) {
+  const onFsChange = () => {
+    const isFs = Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+    if (!isFs) {
       if (frameContainer) frameContainer.classList.remove("pseudo-fullscreen");
       if (datavisStage) datavisStage.classList.remove("pseudo-fullscreen");
       document.body.style.overflow = "";
+    }
+    updateFullscreenBtnText(isFs);
+  };
+
+  document.addEventListener("fullscreenchange", onFsChange);
+  document.addEventListener("webkitfullscreenchange", onFsChange);
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      exitFullscreen();
     }
   });
 
@@ -148,7 +174,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function initSidebarToggle() {
-    const isHidden = localStorage.getItem("ffl_sidebar_hidden") === "true";
+    const stored = localStorage.getItem("ffl_sidebar_hidden");
+    const isHidden = stored !== null ? stored === "true" : true; // Default to collapsed
     setSidebarHidden(isHidden);
 
     if (sidebarToggleBtn) {
@@ -427,21 +454,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (activeTitle) activeTitle.textContent = `${visMeta.icon} ${visMeta.title}`;
     if (activeSubtitle) activeSubtitle.textContent = visMeta.description;
 
-    const savedSheetId = localStorage.getItem("ffl_sheet_id") || (window.FFL_DATA && window.FFL_DATA.config ? window.FFL_DATA.config.sheetId : "");
-
-    // Update External Link
+    // Hide external link in Data Vis mode (no link to Google Sheets)
     if (openExternal) {
-      if (savedSheetId) {
-        if (savedSheetId.startsWith("2PACX-")) {
-          openExternal.href = `https://docs.google.com/spreadsheets/d/e/${savedSheetId}/pubhtml`;
-        } else {
-          openExternal.href = `https://docs.google.com/spreadsheets/d/${savedSheetId}`;
-        }
-        openExternal.textContent = "Open Google Sheet ↗";
-      } else {
-        openExternal.href = "#";
-        openExternal.textContent = "Interactive View ↗";
-      }
+      openExternal.style.display = "none";
     }
 
     // Update Active Buttons in Sidebar & Mobile Bar
@@ -666,8 +681,9 @@ document.addEventListener("DOMContentLoaded", () => {
       deckItems = data.filter((item) => item.type === "slides" || !item.type);
       renderDeckList(deckItems);
 
-      // Start on Decks section
-      switchSection("decks");
+      // Start on Master Power Rankings in Data Vis section
+      switchSection("datavis");
+      loadVisualization("power-rankings");
     })
     .catch((err) => {
       console.error("Manifest load error:", err);
@@ -682,6 +698,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       ];
       renderDeckList(deckItems);
-      switchSection("decks");
+      switchSection("datavis");
+      loadVisualization("power-rankings");
     });
 });

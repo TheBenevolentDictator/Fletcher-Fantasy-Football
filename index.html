@@ -32,7 +32,7 @@
   </section>
 
   <!-- Main Application Container -->
-  <div class="hub-container">
+  <div class="hub-container sidebar-hidden" id="hub-container">
     <aside class="sidebar">
       <div class="brand">
         <div>
@@ -47,18 +47,18 @@
 
       <!-- Top Primary Section Switcher: Decks vs Data Vis -->
       <div class="section-switch" role="tablist">
-        <button id="tab-decks" class="section-tab active" data-section="decks" role="tab" aria-selected="true">
+        <button id="tab-decks" class="section-tab" data-section="decks" role="tab" aria-selected="false">
           <span class="tab-icon">🎬</span>
           <span>Decks</span>
         </button>
-        <button id="tab-datavis" class="section-tab" data-section="datavis" role="tab" aria-selected="false">
+        <button id="tab-datavis" class="section-tab active" data-section="datavis" role="tab" aria-selected="true">
           <span class="tab-icon">📊</span>
           <span>Data Vis</span>
         </button>
       </div>
 
       <!-- Section 1: Presentation Decks Panel -->
-      <div id="decks-nav-panel" class="nav-panel">
+      <div id="decks-nav-panel" class="nav-panel" style="display: none;">
         <div class="panel-header">
           <span class="panel-title">Presentation Decks</span>
           <span class="panel-count" id="decks-count">1 Deck</span>
@@ -67,7 +67,7 @@
       </div>
 
       <!-- Section 2: Data Visualizations Button Display (Sidebar) -->
-      <div id="datavis-nav-panel" class="nav-panel" style="display: none;">
+      <div id="datavis-nav-panel" class="nav-panel">
         <div class="panel-header">
           <span class="panel-title">League Visualizations</span>
           <span class="panel-status-pill" id="sheet-status-indicator">Default Data</span>
@@ -80,38 +80,41 @@
 
     <main class="viewer-stage">
       <header class="stage-header">
-        <div class="title-meta-group">
-          <div class="title-row">
-            <button id="sidebar-toggle-btn" class="sidebar-toggle-btn" type="button" title="Toggle Sidebar Menu">
-              <span class="toggle-icon">◀</span>
-              <span class="toggle-text">Hide Menu</span>
+        <div class="stage-top-bar">
+          <div class="stage-top-left">
+            <button id="sidebar-toggle-btn" class="sidebar-toggle-btn is-hidden" type="button" title="Show Sidebar Menu">
+              <span class="toggle-icon">▶</span>
+              <span class="toggle-text">Show Menu</span>
             </button>
-            <span id="active-badge" class="active-badge">DECK</span>
-            <h1 id="active-title">Loading...</h1>
+            <span id="active-badge" class="active-badge">DATA VIS</span>
           </div>
-          <p id="active-subtitle" class="active-subtitle"></p>
+          <div class="stage-top-right">
+            <button id="fullscreen-btn" class="action-btn" type="button" title="Enter Fullscreen Mode">⛶ Fullscreen</button>
+            <a id="open-external" href="#" target="_blank" rel="noopener" style="display: none;">Open in New Tab ↗</a>
+          </div>
         </div>
-        <div class="stage-actions">
-          <button id="fullscreen-btn" class="action-btn" type="button">⛶ Fullscreen</button>
-          <a id="open-external" href="#" target="_blank" rel="noopener">Open in New Tab ↗</a>
+        <div class="title-meta-group">
+          <h1 id="active-title">🏆 Master Power Rankings</h1>
+          <p id="active-subtitle" class="active-subtitle"></p>
         </div>
       </header>
 
       <!-- Mobile-Friendly Touch Carousel for Visualizations (Appears in Data Vis mode) -->
-      <div id="mobile-vis-bar" class="mobile-vis-bar" style="display: none;">
+      <div id="mobile-vis-bar" class="mobile-vis-bar">
         <div class="mobile-vis-scroll-track" id="mobile-vis-track">
           <!-- Rendered dynamically -->
         </div>
       </div>
 
       <!-- View Container 1: Iframe Viewer for Decks (and optional Sheet embeds) -->
-      <div class="frame-container" id="frame-container">
-        <button id="fs-close-btn" class="fs-close-btn" type="button" aria-label="Exit Fullscreen">✕ Close</button>
+      <div class="frame-container" id="frame-container" style="display: none;">
+        <button id="fs-close-btn" class="fs-close-btn" type="button" aria-label="Exit Fullscreen">✕ Exit Fullscreen</button>
         <iframe id="main-frame" src="" allow="fullscreen" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
       </div>
 
       <!-- View Container 2: Interactive Data Visualization Stage -->
-      <div class="datavis-stage" id="datavis-stage" style="display: none;">
+      <div class="datavis-stage" id="datavis-stage">
+        <button id="fs-close-btn-datavis" class="fs-close-btn" type="button" aria-label="Exit Fullscreen">✕ Exit Fullscreen</button>
         <div id="datavis-content" class="datavis-content">
           <!-- Dynamic Visualization Rendered Here -->
         </div>
