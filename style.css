@@ -1083,6 +1083,15 @@ td.fixed-trend-val {
   border-width: 1.5px;
 }
 
+.avg-score-val {
+  display: inline-block;
+  font-weight: 700;
+  color: #e2e8f0;
+  font-size: 0.8rem;
+  background: none !important;
+  border: none !important;
+}
+
 /* Uniform Cells in Schedule Strength */
 .col-sos-uniform {
   width: 54px;
@@ -1099,9 +1108,20 @@ td.fixed-trend-val {
   text-align: center;
 }
 
-.col-sos-strength {
-  width: 78px;
-  min-width: 78px;
+.col-sos-strength,
+td.col-sos-strength {
+  width: 86px;
+  min-width: 86px;
+  max-width: 86px;
+  text-align: center;
+}
+
+.col-sos-strength .diff-badge {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
   text-align: center;
 }
 
@@ -1592,9 +1612,9 @@ td.fixed-trend-val {
   border: 1px solid rgba(249, 115, 22, 0.4);
 }
 .diff-medium {
-  background: rgba(234, 179, 8, 0.15);
-  color: #facc15;
-  border: 1px solid rgba(234, 179, 8, 0.3);
+  background: rgba(148, 163, 184, 0.15) !important;
+  color: #cbd5e1 !important;
+  border: 1px solid rgba(148, 163, 184, 0.35) !important;
 }
 .diff-easy {
   background: rgba(59, 130, 246, 0.15);
@@ -1611,7 +1631,7 @@ td.fixed-trend-val {
 .mini-progress-fill.diff-tuff { background: #f97316; }
 .mini-progress-fill.diff-solid { background: #eab308; }
 .mini-progress-fill.diff-hard { background: #f97316; }
-.mini-progress-fill.diff-medium { background: #eab308; }
+.mini-progress-fill.diff-medium { background: #94a3b8; }
 .mini-progress-fill.diff-easy { background: #3b82f6; }
 .mini-progress-fill.diff-soft { background: #10b981; }
 

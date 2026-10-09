@@ -296,8 +296,8 @@ const DATA_VIS_ITEMS = [
   },
   {
     id: "expected-record",
-    title: "Expected W-L Record",
-    shortTitle: "Expected W-L",
+    title: "Win Luck",
+    shortTitle: "Win Luck",
     icon: "⚖️",
     badge: "All-Play",
     tag: "Luck Index",
@@ -401,29 +401,33 @@ function getScoreGradientStyle(score, minScore, maxScore) {
   return `background: hsla(${hue}, 70%, 18%, 0.45); color: hsl(${hue}, 85%, 72%); border: 1px solid hsla(${hue}, 70%, 42%, 0.4); font-weight: 700; border-radius: 4px; padding: 0.1rem 0.25rem; display: inline-block;`;
 }
 
-// Detailed luck gradient scale for Expected W-L and Power Rankings
-// High positive luck -> glowing emerald, low positive -> soft mint
-// High negative luck -> deep crimson, low negative -> soft coral
+// Detailed luck gradient scale for Win Luck and Power Rankings
+// Closer to 0 -> fades into opaque/neutral background with muted text
+// Large luck values -> rich, vivid saturated color and border
 function getLuckGradientStyle(diff, minDiff = -1.5, maxDiff = 1.5) {
   const d = parseFloat(diff);
   if (isNaN(d)) return '';
-  if (Math.abs(d) < 0.05) {
-    return 'background: rgba(148, 163, 184, 0.12); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.25);';
+  if (Math.abs(d) < 0.15) {
+    return 'background: rgba(148, 163, 184, 0.08); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.18); font-weight: 600;';
   }
   if (d > 0) {
-    const max = maxDiff > 0 ? maxDiff : 1.5;
+    const max = Math.max(1.0, maxDiff > 0 ? maxDiff : 1.5);
     const t = Math.min(1, Math.max(0, d / max));
-    const lightness = Math.round(72 + t * 14);
-    const bgAlpha = (0.16 + t * 0.38).toFixed(2);
-    const borderAlpha = (0.28 + t * 0.45).toFixed(2);
-    return `background: hsla(142, 75%, 22%, ${bgAlpha}); color: hsl(142, 85%, ${lightness}%); border: 1px solid hsla(142, 75%, 45%, ${borderAlpha}); font-weight: 700;`;
+    const p = Math.pow(t, 1.25);
+    const sat = Math.round(22 + p * 74);
+    const lightness = Math.round(72 + p * 15);
+    const bgAlpha = (0.06 + p * 0.44).toFixed(2);
+    const borderAlpha = (0.12 + p * 0.58).toFixed(2);
+    return `background: hsla(142, ${sat}%, 20%, ${bgAlpha}); color: hsl(142, ${sat}%, ${lightness}%); border: 1px solid hsla(142, ${sat}%, 45%, ${borderAlpha}); font-weight: 700;`;
   } else {
-    const min = minDiff < 0 ? Math.abs(minDiff) : 1.5;
+    const min = Math.max(1.0, minDiff < 0 ? Math.abs(minDiff) : 1.5);
     const t = Math.min(1, Math.max(0, Math.abs(d) / min));
-    const lightness = Math.round(72 + t * 14);
-    const bgAlpha = (0.16 + t * 0.38).toFixed(2);
-    const borderAlpha = (0.28 + t * 0.45).toFixed(2);
-    return `background: hsla(0, 75%, 22%, ${bgAlpha}); color: hsl(0, 85%, ${lightness}%); border: 1px solid hsla(0, 75%, 45%, ${borderAlpha}); font-weight: 700;`;
+    const p = Math.pow(t, 1.25);
+    const sat = Math.round(22 + p * 74);
+    const lightness = Math.round(72 + p * 15);
+    const bgAlpha = (0.06 + p * 0.44).toFixed(2);
+    const borderAlpha = (0.12 + p * 0.58).toFixed(2);
+    return `background: hsla(0, ${sat}%, 20%, ${bgAlpha}); color: hsl(0, ${sat}%, ${lightness}%); border: 1px solid hsla(0, ${sat}%, 45%, ${borderAlpha}); font-weight: 700;`;
   }
 }
 
@@ -563,11 +567,10 @@ function renderWeeklyPoints(data) {
           <tfoot>
             <tr class="table-average-row">
               <td class="sticky-col">Average</td>
-              <td class="col-fixed-pts"><span class="score-pill avg-pill" style="${getScoreGradientStyle(overallAvg, avgMinMax.min, avgMinMax.max)}">${overallAvg.toFixed(1)}</span></td>
-              ${weekAvgs.map((wAvg, i) => {
-                const mm = weekMinMax[i] || { min: 0, max: 200 };
-                return `<td class="col-fixed-pts"><span class="score-pill avg-pill" style="${wAvg > 0 ? getScoreGradientStyle(wAvg, mm.min, mm.max) : ''}">${wAvg > 0 ? wAvg.toFixed(1) : '—'}</span></td>`;
-              }).join('')}
+              <td class="col-fixed-pts"><span class="avg-score-val">${overallAvg.toFixed(1)}</span></td>
+              ${weekAvgs.map((wAvg) => `
+                <td class="col-fixed-pts"><span class="avg-score-val">${wAvg > 0 ? wAvg.toFixed(1) : '—'}</span></td>
+              `).join('')}
             </tr>
           </tfoot>
         </table>
@@ -1016,7 +1019,7 @@ function renderLiveSheetTab(rows, visId, tabName, extraData = {}) {
                       <td class="accent-text bold-stat">${item.pwrScore}</td>
                       <td class="bold-stat">${item.ppg.toFixed(1)}</td>
                       <td class="fixed-rank-val"><span class="rank-box-wide" style="${getRankGradientStyle(item.avgRank)}">#${item.avgRank}</span></td>
-                      <td class="fixed-rank-val"><span class="rank-box-wide" style="${getRankGradientStyle(item.sosRank)}">#${item.sosRank}</span></td>
+                      <td class="fixed-rank-val"><span class="rank-box-wide" style="${getRankGradientStyle(item.sosRank, true)}">#${item.sosRank}</span></td>
                       <td><span class="luck-badge" style="${getLuckGradientStyle(luckVal)}">${luckDisplay}</span></td>
                     </tr>
                   `;
@@ -1122,11 +1125,10 @@ function renderLiveSheetTab(rows, visId, tabName, extraData = {}) {
               <tfoot>
                 <tr class="table-average-row">
                   <td class="sticky-col">Average</td>
-                  <td class="col-fixed-pts"><span class="score-pill avg-pill" style="${getScoreGradientStyle(overallAvg, avgMinMax.min, avgMinMax.max)}">${overallAvg.toFixed(1)}</span></td>
-                  ${weekAvgScores.map((wAvg, wIdx) => {
-                    const mm = weekMinMax[wIdx] || { min: 0, max: 200 };
-                    return `<td class="col-fixed-pts"><span class="score-pill avg-pill" style="${wAvg > 0 ? getScoreGradientStyle(wAvg, mm.min, mm.max) : ''}">${wAvg > 0 ? wAvg.toFixed(1) : '—'}</span></td>`;
-                  }).join('')}
+                  <td class="col-fixed-pts"><span class="avg-score-val">${overallAvg.toFixed(1)}</span></td>
+                  ${weekAvgScores.map((wAvg) => `
+                    <td class="col-fixed-pts"><span class="avg-score-val">${wAvg > 0 ? wAvg.toFixed(1) : '—'}</span></td>
+                  `).join('')}
                 </tr>
               </tfoot>
             </table>
