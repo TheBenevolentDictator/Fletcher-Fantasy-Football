@@ -374,6 +374,16 @@ async function fetchGoogleSheetTab(sheetId, tabName, visId) {
 
 // 6. View Renderers
 
+// Color gradient scale for ranks 1 to 14 (1 = Green, 7.5 = Yellow, 14 = Red)
+function getRankGradientStyle(val) {
+  const r = parseFloat(val);
+  if (isNaN(r) || r < 1) return '';
+  const clamped = Math.max(1, Math.min(14, r));
+  const t = (clamped - 1) / 13; // 0 (best) to 1 (worst)
+  const hue = Math.round((1 - t) * 130); // 130 (green) down to 0 (red), 65 = yellow
+  return `background: hsla(${hue}, 70%, 20%, 0.5); color: hsl(${hue}, 85%, 68%); border: 1px solid hsla(${hue}, 70%, 42%, 0.45);`;
+}
+
 // RENDERER 1: MASTER POWER RANKINGS
 function renderPowerRankings(data) {
   const list = data.powerRankings || DEFAULT_LEAGUE_DATA.powerRankings;
@@ -384,17 +394,17 @@ function renderPowerRankings(data) {
     <div class="vis-view-wrapper">
       <div class="vis-summary-banner">
         <div class="summary-metric-card">
-          <span class="metric-label">League Leader</span>
-          <span class="metric-val accent">${topTeam.team}</span>
+          <span class="metric-label">Leader</span>
+          <span class="metric-val accent">${topTeam.manager}</span>
           <span class="metric-sub">${topTeam.record} • ${topTeam.powerScore} Rating</span>
         </div>
         <div class="summary-metric-card">
-          <span class="metric-label">Biggest Mover</span>
+          <span class="metric-label">Top Mover</span>
           <span class="metric-val">${biggestMover.trend > 0 ? '▲ +' + biggestMover.trend : '—'}</span>
-          <span class="metric-sub">${biggestMover.team}</span>
+          <span class="metric-sub">${biggestMover.manager}</span>
         </div>
         <div class="summary-metric-card">
-          <span class="metric-label">League Scoring Avg</span>
+          <span class="metric-label">Scoring Avg</span>
           <span class="metric-val">120.9</span>
           <span class="metric-sub">Points / Week</span>
         </div>
@@ -404,43 +414,27 @@ function renderPowerRankings(data) {
         <table class="vis-table">
           <thead>
             <tr>
-              <th class="sticky-col">Manager & Team</th>
+              <th class="sticky-col">Manager</th>
               <th>Rank</th>
-              <th>Record</th>
+              <th>Rec</th>
               <th>PF</th>
               <th>PA</th>
-              <th>Power Score</th>
+              <th>Pwr</th>
               <th>Trend</th>
               <th>Tier</th>
             </tr>
           </thead>
           <tbody>
             ${list.map((item) => {
-              const rankBadge = item.rank === 1 ? 'gold-rank' : item.rank === 2 ? 'silver-rank' : item.rank === 3 ? 'bronze-rank' : 'standard-rank';
               const trendDisplay = item.trend > 0 ? `<span class="trend-up">▲ +${item.trend}</span>` : item.trend < 0 ? `<span class="trend-down">▼ ${item.trend}</span>` : `<span class="trend-even">—</span>`;
               return `
                 <tr>
-                  <td class="sticky-col">
-                    <div class="team-identity-sticky">
-                      <span class="rank-circle ${rankBadge}">#${item.rank}</span>
-                      <div class="team-identity">
-                        <span class="team-title-bold">${item.team}</span>
-                        <span class="manager-sub">${item.manager}</span>
-                      </div>
-                    </div>
-                  </td>
-                  <td><span class="rank-circle ${rankBadge}">#${item.rank}</span></td>
+                  <td class="sticky-col"><span class="team-title-bold">${item.manager}</span></td>
+                  <td><span class="rank-box" style="${getRankGradientStyle(item.rank)}">#${item.rank}</span></td>
                   <td><span class="record-badge">${item.record}</span></td>
                   <td class="bold-stat">${item.pf.toFixed(1)}</td>
                   <td class="muted-stat">${item.pa.toFixed(1)}</td>
-                  <td>
-                    <div class="score-bar-group">
-                      <span class="power-score-num">${item.powerScore.toFixed(1)}</span>
-                      <div class="mini-progress-track">
-                        <div class="mini-progress-fill" style="width: ${item.powerScore}%"></div>
-                      </div>
-                    </div>
-                  </td>
+                  <td class="accent-text bold-stat">${item.powerScore.toFixed(1)}</td>
                   <td>${trendDisplay}</td>
                   <td><span class="tier-pill">${item.tier.split(':')[0]}</span></td>
                 </tr>
@@ -461,7 +455,7 @@ function renderWeeklyPoints(data) {
   return `
     <div class="vis-view-wrapper">
       <div class="vis-control-bar">
-        <span class="vis-note">📊 Weekly points scored per manager across the season</span>
+        <span class="vis-note">📊 Weekly points scored per manager</span>
         <div class="vis-legend">
           <span class="legend-chip"><span class="chip-color high-chip"></span> High Score</span>
           <span class="legend-chip"><span class="chip-color low-chip"></span> Low Score</span>
@@ -472,10 +466,9 @@ function renderWeeklyPoints(data) {
         <table class="vis-table">
           <thead>
             <tr>
-              <th class="sticky-col">Manager & Team</th>
-              ${weeks.map(w => `<th>${w}</th>`).join('')}
-              <th>Total PF</th>
-              <th>Avg/Wk</th>
+              <th class="sticky-col">Manager</th>
+              <th>Avg</th>
+              ${weeks.map((w, i) => `<th>W${i + 1}</th>`).join('')}
               <th>High</th>
               <th>Low</th>
             </tr>
@@ -483,20 +476,14 @@ function renderWeeklyPoints(data) {
           <tbody>
             ${list.map(item => `
               <tr>
-                <td class="sticky-col">
-                  <div class="team-identity">
-                    <span class="team-title-bold">${item.team}</span>
-                    <span class="manager-sub">${item.manager}</span>
-                  </div>
-                </td>
+                <td class="sticky-col"><span class="team-title-bold">${item.manager}</span></td>
+                <td class="bold-stat accent-text">${item.avg.toFixed(1)}</td>
                 ${item.scores.map(s => {
                   const isHigh = s === item.high;
                   const isLow = s === item.low;
                   const cellClass = isHigh ? 'score-highlight-high' : isLow ? 'score-highlight-low' : '';
                   return `<td class="${cellClass}">${s.toFixed(1)}</td>`;
                 }).join('')}
-                <td class="bold-stat accent-text">${item.total.toFixed(1)}</td>
-                <td class="bold-stat">${item.avg.toFixed(1)}</td>
                 <td class="stat-high">${item.high.toFixed(1)}</td>
                 <td class="stat-low">${item.low.toFixed(1)}</td>
               </tr>
@@ -513,20 +500,14 @@ function renderWeeklyRanks(data) {
   const list = data.weeklyRanks || DEFAULT_LEAGUE_DATA.weeklyRanks;
   const weeks = data.weeks || DEFAULT_LEAGUE_DATA.weeks;
 
-  function getRankBadge(rank) {
-    if (rank <= 3) return 'rank-cell-top';
-    if (rank >= 10) return 'rank-cell-bottom';
-    return 'rank-cell-mid';
-  }
-
   return `
     <div class="vis-view-wrapper">
       <div class="vis-control-bar">
-        <span class="vis-note">🔢 Scoring Rank in the League (1 = Highest Scorer, 12 = Lowest Scorer)</span>
+        <span class="vis-note">🔢 Scoring rank matrix (1 = Highest Scorer, 14 = Lowest Scorer)</span>
         <div class="vis-legend">
-          <span class="legend-chip"><span class="chip-color rank-top-chip"></span> Top 3 (#1-#3)</span>
-          <span class="legend-chip"><span class="chip-color rank-mid-chip"></span> Mid (#4-#9)</span>
-          <span class="legend-chip"><span class="chip-color rank-bot-chip"></span> Bottom 3 (#10-#12)</span>
+          <span class="legend-chip"><span class="chip-color rank-top-chip"></span> #1 Best</span>
+          <span class="legend-chip"><span class="chip-color rank-mid-chip"></span> #7 Mid</span>
+          <span class="legend-chip"><span class="chip-color rank-bot-chip"></span> #14 Worst</span>
         </div>
       </div>
 
@@ -534,30 +515,23 @@ function renderWeeklyRanks(data) {
         <table class="vis-table">
           <thead>
             <tr>
-              <th class="sticky-col">Manager & Team</th>
-              ${weeks.map(w => `<th>${w} Rank</th>`).join('')}
-              <th>Avg Rank</th>
-              <th>Best</th>
-              <th>Worst</th>
+              <th class="sticky-col">Manager</th>
+              <th>Rank</th>
+              <th>Avg</th>
+              ${weeks.map((w, i) => `<th>W${i + 1}</th>`).join('')}
             </tr>
           </thead>
           <tbody>
-            ${list.map(item => `
+            ${list.map((item, idx) => `
               <tr>
-                <td class="sticky-col">
-                  <div class="team-identity">
-                    <span class="team-title-bold">${item.team}</span>
-                    <span class="manager-sub">${item.manager}</span>
-                  </div>
-                </td>
+                <td class="sticky-col"><span class="team-title-bold">${item.manager}</span></td>
+                <td><span class="rank-box" style="${getRankGradientStyle(idx + 1)}">#${idx + 1}</span></td>
+                <td><span class="rank-box-wide" style="${getRankGradientStyle(item.avgRank)}">#${item.avgRank.toFixed(1)}</span></td>
                 ${item.ranks.map(r => `
                   <td>
-                    <span class="rank-pill-box ${getRankBadge(r)}">#${r}</span>
+                    <span class="rank-box" style="${getRankGradientStyle(r)}">${r}</span>
                   </td>
                 `).join('')}
-                <td class="bold-stat">${item.avgRank.toFixed(1)}</td>
-                <td class="stat-high">#${item.best}</td>
-                <td class="stat-low">#${item.worst}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -574,20 +548,20 @@ function renderExpectedRecord(data) {
   return `
     <div class="vis-view-wrapper">
       <div class="vis-control-bar">
-        <span class="vis-note">⚖️ All-Play Expected Record: What your record would be if you played every league manager every week</span>
+        <span class="vis-note">⚖️ All-Play Expected Record & Luck</span>
       </div>
 
       <div class="table-responsive-container">
         <table class="vis-table">
           <thead>
             <tr>
-              <th class="sticky-col">Manager & Team</th>
-              <th>Actual Record</th>
-              <th>Expected (All-Play)</th>
-              <th>Actual Win %</th>
-              <th>Expected Win %</th>
-              <th>Luck Factor</th>
-              <th>Assessment</th>
+              <th class="sticky-col">Manager</th>
+              <th>Record</th>
+              <th>Exp Rec</th>
+              <th>Luck</th>
+              <th>Status</th>
+              <th>Win%</th>
+              <th>Exp%</th>
             </tr>
           </thead>
           <tbody>
@@ -596,25 +570,17 @@ function renderExpectedRecord(data) {
               const luckSign = item.luckDiff > 0 ? `+${item.luckDiff.toFixed(1)}` : item.luckDiff.toFixed(1);
               return `
                 <tr>
-                  <td class="sticky-col">
-                    <div class="team-identity-sticky">
-                      <span class="rank-circle standard-rank">#${item.rank || (idx + 1)}</span>
-                      <div class="team-identity">
-                        <span class="team-title-bold">${item.team}</span>
-                        <span class="manager-sub">${item.manager}</span>
-                      </div>
-                    </div>
-                  </td>
+                  <td class="sticky-col"><span class="team-title-bold">${item.manager}</span></td>
                   <td><span class="record-badge">${item.actualW}-${item.actualL}</span></td>
                   <td class="bold-stat">${item.expW}-${item.expL}</td>
-                  <td>${(item.actualWinPct * 100).toFixed(0)}%</td>
-                  <td>${(item.expWinPct * 100).toFixed(0)}%</td>
                   <td>
                     <span class="luck-badge ${luckClass}">
-                      ${luckSign} Wins
+                      ${luckSign}
                     </span>
                   </td>
                   <td><span class="status-pill">${item.status}</span></td>
+                  <td>${(item.actualWinPct * 100).toFixed(0)}%</td>
+                  <td>${(item.expWinPct * 100).toFixed(0)}%</td>
                 </tr>
               `;
             }).join('')}
@@ -626,7 +592,6 @@ function renderExpectedRecord(data) {
 }
 
 // RENDERER 5: W-L HEATMAP
-// Displays each person's weekly scoring rank for each win and loss!
 function renderHeatmap(data) {
   const list = data.heatmap || DEFAULT_LEAGUE_DATA.heatmap;
   const weeks = data.weeks || DEFAULT_LEAGUE_DATA.weeks;
@@ -634,51 +599,36 @@ function renderHeatmap(data) {
   return `
     <div class="vis-view-wrapper">
       <div class="vis-control-bar">
-        <span class="vis-note">🟩 W-L Heatmap: Matchup result paired with weekly scoring rank (#1 to #12)</span>
+        <span class="vis-note">🟩 W-L Heatmap: Weekly scoring ranks for wins & losses</span>
         <div class="vis-legend">
           <span class="legend-chip"><span class="chip-color heatmap-win-chip"></span> Win</span>
           <span class="legend-chip"><span class="chip-color heatmap-loss-chip"></span> Loss</span>
-          <span class="legend-chip"><span class="badge-callout">🔥 Bad Beat</span> Top 6 score & lost</span>
-          <span class="legend-chip"><span class="badge-callout">🍀 Bailout</span> Bottom 6 score & won</span>
+          <span class="legend-chip">🔥 Bad Beat</span>
+          <span class="legend-chip">🍀 Bailout</span>
         </div>
       </div>
 
       <div class="table-responsive-container">
-        <table class="vis-table heatmap-table">
+        <table class="vis-table">
           <thead>
             <tr>
-              <th class="sticky-col">Manager & Team</th>
-              ${weeks.map(w => `<th class="heatmap-header">${w}</th>`).join('')}
+              <th class="sticky-col">Manager</th>
+              ${weeks.map((w, i) => `<th>W${i + 1}</th>`).join('')}
             </tr>
           </thead>
           <tbody>
             ${list.map(item => `
               <tr>
-                <td class="sticky-col">
-                  <div class="team-identity">
-                    <span class="team-title-bold">${item.team}</span>
-                    <span class="manager-sub">${item.manager}</span>
-                  </div>
-                </td>
+                <td class="sticky-col"><span class="team-title-bold">${item.manager}</span></td>
                 ${item.weeks.map(w => {
                   const isWin = w.result === 'W';
-                  const cellClass = isWin ? 'heatmap-win' : 'heatmap-loss';
-                  const calloutBadge = w.note === 'bad-beat' 
-                    ? `<span class="heatmap-callout bad-beat" title="Top score that lost!">🔥 Bad Beat</span>` 
-                    : w.note === 'bailout' 
-                    ? `<span class="heatmap-callout bailout" title="Bottom score that won!">🍀 Bailout</span>` 
-                    : '';
-
+                  const chipClass = isWin ? 'win-chip' : 'loss-chip';
+                  const flag = w.note === 'bad-beat' ? '<span class="chip-flag">🔥</span>' : w.note === 'bailout' ? '<span class="chip-flag">🍀</span>' : '';
                   return `
-                    <td class="heatmap-cell ${cellClass}">
-                      <div class="cell-content-stack">
-                        <div class="cell-primary-row">
-                          <span class="cell-result">${w.result}</span>
-                          <span class="cell-rank-pill">#${w.rank}</span>
-                        </div>
-                        <span class="cell-score-sub">${w.score.toFixed(1)} pts</span>
-                        ${calloutBadge}
-                      </div>
+                    <td>
+                      <span class="heat-chip ${chipClass}">
+                        ${w.rank}${flag}
+                      </span>
                     </td>
                   `;
                 }).join('')}
@@ -698,48 +648,32 @@ function renderStrengthOfSchedule(data) {
   return `
     <div class="vis-view-wrapper">
       <div class="vis-control-bar">
-        <span class="vis-note">🛡️ Strength of Schedule: Evaluates opponent points against and schedule difficulty</span>
+        <span class="vis-note">🛡️ Strength of Schedule</span>
       </div>
 
       <div class="table-responsive-container">
         <table class="vis-table">
           <thead>
             <tr>
-              <th class="sticky-col">Manager & Team</th>
-              <th>Opponent Avg Rank</th>
-              <th>Schedule Difficulty</th>
+              <th class="sticky-col">Manager</th>
+              <th>SoS</th>
+              <th>Opp Avg</th>
+              <th>Difficulty</th>
               <th>Total PA</th>
-              <th>Opponent Avg/Wk</th>
+              <th>Avg PA</th>
             </tr>
           </thead>
           <tbody>
-            ${list.map(item => {
-              const diffPercent = Math.max(10, Math.min(100, ((13 - item.rank) / 12) * 100));
-              return `
-                <tr>
-                  <td class="sticky-col">
-                    <div class="team-identity-sticky">
-                      <span class="rank-circle standard-rank">#${item.rank}</span>
-                      <div class="team-identity">
-                        <span class="team-title-bold">${item.team}</span>
-                        <span class="manager-sub">${item.manager}</span>
-                      </div>
-                    </div>
-                  </td>
-                  <td class="bold-stat">#${item.oppAvgRank.toFixed(1)}</td>
-                  <td>
-                    <div class="sos-bar-cell">
-                      <span class="diff-badge ${item.badgeClass}">${item.difficulty}</span>
-                      <div class="mini-progress-track">
-                        <div class="mini-progress-fill ${item.badgeClass}" style="width: ${diffPercent}%"></div>
-                      </div>
-                    </div>
-                  </td>
-                  <td>${item.totalPA.toFixed(1)}</td>
-                  <td>${item.avgPA.toFixed(1)}</td>
-                </tr>
-              `;
-            }).join('')}
+            ${list.map(item => `
+              <tr>
+                <td class="sticky-col"><span class="team-title-bold">${item.manager}</span></td>
+                <td><span class="rank-box" style="${getRankGradientStyle(item.rank)}">#${item.rank}</span></td>
+                <td><span class="rank-box-wide" style="${getRankGradientStyle(item.oppAvgRank)}">#${item.oppAvgRank.toFixed(1)}</span></td>
+                <td><span class="diff-badge ${item.badgeClass}">${item.difficulty}</span></td>
+                <td>${item.totalPA.toFixed(1)}</td>
+                <td>${item.avgPA.toFixed(1)}</td>
+              </tr>
+            `).join('')}
           </tbody>
         </table>
       </div>
@@ -790,25 +724,47 @@ function renderLiveSheetTab(rows, visId, tabName) {
 
   // 1. LIVE HEATMAP PARSER (WL Heatmap / WL Heatmap Ordered)
   if (visId === "heatmap") {
+    // Dynamically locate Wins and Losses sections in header row to survive column additions/deletions
+    const headerRow = rows.find(r => r.some(c => /wins/i.test(c) && !/avg/i.test(c)) && r.some(c => /losses/i.test(c) && !/avg/i.test(c))) || rows[1] || rows[0] || [];
+    const winsCol = headerRow.findIndex(c => /wins/i.test((c || '').trim()) && !/avg/i.test(c));
+    const lossesCol = headerRow.findIndex(c => /losses/i.test((c || '').trim()) && !/avg/i.test(c));
+
     const heatRows = [];
     for (const r of rows) {
       const mgr = findManagerInRow(r);
       if (!mgr) continue;
 
       const idx = mgr.index;
-      // Wins ranks are up to 14 slots after manager column
-      const wins = r.slice(idx + 1, idx + 15).filter(x => /^\d+$/.test(x.trim())).map(Number);
-      // Losses ranks are the 14 slots after wins
-      const losses = r.slice(idx + 15, idx + 29).filter(x => /^\d+$/.test(x.trim())).map(Number);
+      const actualWinsCol = winsCol !== -1 ? winsCol : (idx + 1);
+      const actualLossesCol = lossesCol !== -1 ? lossesCol : (idx + 8);
+
+      const wins = [];
+      const endWinCol = actualLossesCol > actualWinsCol ? actualLossesCol : r.length;
+      for (let c = actualWinsCol; c < endWinCol; c++) {
+        const val = (r[c] || '').trim();
+        if (/^\d+$/.test(val)) {
+          const num = parseInt(val, 10);
+          if (num >= 1 && num <= 14) wins.push(num);
+        }
+      }
+
+      const losses = [];
+      for (let c = actualLossesCol; c < r.length; c++) {
+        const val = (r[c] || '').trim();
+        if (/^\d+$/.test(val)) {
+          const num = parseInt(val, 10);
+          if (num >= 1 && num <= 14) losses.push(num);
+        }
+      }
 
       const avgWin = wins.length > 0 ? (wins.reduce((a, b) => a + b, 0) / wins.length).toFixed(2) : '—';
       const avgLoss = losses.length > 0 ? (losses.reduce((a, b) => a + b, 0) / losses.length).toFixed(2) : '—';
 
       heatRows.push({
         manager: mgr.name,
-        team: mgr.team,
         record: `${wins.length}-${losses.length}`,
         winsCount: wins.length,
+        lossesCount: losses.length,
         wins,
         losses,
         avgWin,
@@ -826,51 +782,44 @@ function renderLiveSheetTab(rows, visId, tabName) {
             <div class="vis-legend">
               <span class="legend-chip"><span class="chip-color heatmap-win-chip"></span> Win</span>
               <span class="legend-chip"><span class="chip-color heatmap-loss-chip"></span> Loss</span>
-              <span class="legend-chip"><span class="badge-callout">🔥 Bad Beat</span> Top 6 score & lost</span>
-              <span class="legend-chip"><span class="badge-callout">🍀 Bailout</span> Bottom 7 score & won</span>
+              <span class="legend-chip">🔥 Bad Beat (Lost ≤#6)</span>
+              <span class="legend-chip">🍀 Bailout (Won ≥#7)</span>
             </div>
           </div>
           <div class="table-responsive-container">
-            <table class="vis-table heatmap-table">
+            <table class="vis-table">
               <thead>
                 <tr>
                   <th class="sticky-col">Manager</th>
                   <th>Record</th>
-                  <th>Avg Win Rank</th>
-                  <th>Avg Loss Rank</th>
-                  <th>Wins (Scoring Ranks)</th>
-                  <th>Losses (Scoring Ranks)</th>
+                  <th>Avg W</th>
+                  <th>Avg L</th>
+                  <th>Wins</th>
+                  <th>Losses</th>
                 </tr>
               </thead>
               <tbody>
                 ${heatRows.map(item => `
                   <tr>
-                    <td class="sticky-col">
-                      <div class="team-identity">
-                        <span class="team-title-bold">${item.manager}</span>
-                        <span class="manager-sub">${item.team}</span>
-                      </div>
-                    </td>
+                    <td class="sticky-col"><span class="team-title-bold">${item.manager}</span></td>
                     <td><span class="record-badge">${item.record}</span></td>
-                    <td class="stat-high">${item.avgWin}</td>
-                    <td class="stat-low">${item.avgLoss}</td>
+                    <td><span class="rank-box-wide" style="${item.avgWin !== '—' ? getRankGradientStyle(item.avgWin) : ''}">${item.avgWin}</span></td>
+                    <td><span class="rank-box-wide" style="${item.avgLoss !== '—' ? getRankGradientStyle(item.avgLoss) : ''}">${item.avgLoss}</span></td>
                     <td>
-                      <div style="display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap;">
+                      <div class="heat-chip-stack">
                         ${item.wins.length === 0 ? '<span class="muted-stat">—</span>' : item.wins.map(w => `
-                          <div class="heatmap-cell heatmap-win" style="display: inline-flex; flex-direction: column; align-items: center; padding: 0.25rem 0.5rem !important;">
-                            <span class="cell-result" style="font-size: 0.8rem;">W #${w}</span>
-                            ${w >= 7 ? '<span class="heatmap-callout bailout">🍀 Bailout</span>' : ''}
-                          </div>
+                          <span class="heat-chip win-chip" title="${w >= 7 ? 'Bailout Win (scoring rank #' + w + ')' : 'Scoring rank #' + w}">
+                            ${w}${w >= 7 ? '<span class="chip-flag">🍀</span>' : ''}
+                          </span>
                         `).join('')}
                       </div>
                     </td>
                     <td>
-                      <div style="display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap;">
+                      <div class="heat-chip-stack">
                         ${item.losses.length === 0 ? '<span class="muted-stat">—</span>' : item.losses.map(l => `
-                          <div class="heatmap-cell heatmap-loss" style="display: inline-flex; flex-direction: column; align-items: center; padding: 0.25rem 0.5rem !important;">
-                            <span class="cell-result" style="font-size: 0.8rem;">L #${l}</span>
-                            ${l <= 6 ? '<span class="heatmap-callout bad-beat">🔥 Bad Beat</span>' : ''}
-                          </div>
+                          <span class="heat-chip loss-chip" title="${l <= 6 ? 'Bad Beat Loss (scoring rank #' + l + ')' : 'Scoring rank #' + l}">
+                            ${l}${l <= 6 ? '<span class="chip-flag">🔥</span>' : ''}
+                          </span>
                         `).join('')}
                       </div>
                     </td>
@@ -888,7 +837,7 @@ function renderLiveSheetTab(rows, visId, tabName) {
   if (visId === "power-rankings") {
     const headerRow = rows.find(r => r.some(c => /pwr.*rnk|power.*rank|ppg/i.test(c))) || rows[0] || [];
     const pwrCol = headerRow.findIndex(c => /new\s*pwr|power.*score/i.test(c));
-    const rankCol = headerRow.findIndex(c => /pwr\s*rnk|power\s*rank|^rank|^#/i.test(c));
+    const rankCol = headerRow.findIndex(c => /pwr\s*rnk|power\s*rank|^rank|^#/i.test(c) && !/score/i.test(c));
     const ppgCol = headerRow.findIndex(c => /ppg|^pts|^points/i.test(c));
     const avgRankCol = headerRow.findIndex(c => /avg.*scoring|avg.*rank/i.test(c));
     const sosRankCol = headerRow.findIndex(c => /sos.*rank/i.test(c));
@@ -931,7 +880,6 @@ function renderLiveSheetTab(rows, visId, tabName) {
         rank: parseInt(rank, 10) || (pwrRows.length + 1),
         trend,
         manager: mgr.name,
-        team: mgr.team,
         record: `${w}-${l}`,
         ppg,
         avgRank,
@@ -948,19 +896,19 @@ function renderLiveSheetTab(rows, visId, tabName) {
         <div class="vis-view-wrapper">
           <div class="vis-summary-banner">
             <div class="summary-metric-card">
-              <span class="metric-label">League Leader</span>
+              <span class="metric-label">Leader</span>
               <span class="metric-val accent">${pwrRows[0].manager}</span>
-              <span class="metric-sub">${pwrRows[0].record} • ${pwrRows[0].pwrScore} Pwr Score</span>
+              <span class="metric-sub">${pwrRows[0].record} • ${pwrRows[0].pwrScore} Pwr</span>
             </div>
             <div class="summary-metric-card">
-              <span class="metric-label">Leader Scoring</span>
+              <span class="metric-label">Top PPG</span>
               <span class="metric-val">${pwrRows[0].ppg.toFixed(1)}</span>
               <span class="metric-sub">Points / Week</span>
             </div>
             <div class="summary-metric-card">
-              <span class="metric-label">Total Teams</span>
+              <span class="metric-label">Managers</span>
               <span class="metric-val">${pwrRows.length}</span>
-              <span class="metric-sub">Active Managers</span>
+              <span class="metric-sub">Active League</span>
             </div>
           </div>
           <div class="table-responsive-container">
@@ -969,41 +917,31 @@ function renderLiveSheetTab(rows, visId, tabName) {
                 <tr>
                   <th class="sticky-col">Manager</th>
                   <th>Rank</th>
-                  <th>Record</th>
-                  <th>Power Score</th>
+                  <th>Rec</th>
+                  <th>Pwr</th>
                   <th>PPG</th>
                   <th>Trend</th>
-                  <th>Avg Scoring Rank</th>
-                  <th>SoS Rank</th>
-                  <th>Win Luck</th>
+                  <th>Avg Rnk</th>
+                  <th>SoS</th>
+                  <th>Luck</th>
                 </tr>
               </thead>
               <tbody>
                 ${pwrRows.map(item => {
-                  const rNum = item.rank;
-                  const rankBadge = rNum === 1 ? 'gold-rank' : rNum === 2 ? 'silver-rank' : rNum === 3 ? 'bronze-rank' : 'standard-rank';
                   const trendDisplay = item.trend === '➚' ? '<span class="trend-up">▲</span>' : item.trend === '➘' ? '<span class="trend-down">▼</span>' : '<span class="trend-even">➟</span>';
                   const luckVal = parseFloat(item.luck) || 0;
                   const luckClass = luckVal > 0 ? 'luck-lucky' : luckVal < 0 ? 'luck-unlucky' : 'luck-neutral';
                   const luckDisplay = item.luck ? (luckVal > 0 ? '+' : '') + item.luck : '—';
                   return `
                     <tr>
-                      <td class="sticky-col">
-                        <div class="team-identity-sticky">
-                          <span class="rank-circle ${rankBadge}">#${item.rank}</span>
-                          <div class="team-identity">
-                            <span class="team-title-bold">${item.manager}</span>
-                            <span class="manager-sub">${item.team}</span>
-                          </div>
-                        </div>
-                      </td>
-                      <td><span class="rank-circle ${rankBadge}">#${item.rank}</span></td>
+                      <td class="sticky-col"><span class="team-title-bold">${item.manager}</span></td>
+                      <td><span class="rank-box" style="${getRankGradientStyle(item.rank)}">#${item.rank}</span></td>
                       <td><span class="record-badge">${item.record}</span></td>
                       <td class="accent-text bold-stat">${item.pwrScore}</td>
                       <td class="bold-stat">${item.ppg.toFixed(1)}</td>
                       <td>${trendDisplay}</td>
-                      <td>#${item.avgRank}</td>
-                      <td>#${item.sosRank}</td>
+                      <td><span class="rank-box-wide" style="${getRankGradientStyle(item.avgRank)}">#${item.avgRank}</span></td>
+                      <td><span class="rank-box-wide" style="${getRankGradientStyle(item.sosRank)}">#${item.sosRank}</span></td>
                       <td><span class="luck-badge ${luckClass}">${luckDisplay}</span></td>
                     </tr>
                   `;
@@ -1033,7 +971,7 @@ function renderLiveSheetTab(rows, visId, tabName) {
         });
         if (hasScore) {
           const wkNum = h.replace(/^week\s*/i, '');
-          activeWeeks.push({ col: c, label: `Week ${wkNum}` });
+          activeWeeks.push({ col: c, wkNum: wkNum, label: `W${wkNum}` });
         }
       }
     }
@@ -1052,7 +990,6 @@ function renderLiveSheetTab(rows, visId, tabName) {
 
       ptsRows.push({
         manager: mgr.name,
-        team: mgr.team,
         avg,
         scores,
         high,
@@ -1067,10 +1004,10 @@ function renderLiveSheetTab(rows, visId, tabName) {
       return `
         <div class="vis-view-wrapper">
           <div class="vis-control-bar">
-            <span class="vis-note">🟢 Live data from tab <b>"${tabName}"</b> • ${ptsRows.length} Managers</span>
+            <span class="vis-note">🟢 Live points from tab <b>"${tabName}"</b> • ${ptsRows.length} Managers</span>
             <div class="vis-legend">
-              <span class="legend-chip"><span class="chip-color high-chip"></span> Personal High</span>
-              <span class="legend-chip"><span class="chip-color low-chip"></span> Personal Low</span>
+              <span class="legend-chip"><span class="chip-color high-chip"></span> High</span>
+              <span class="legend-chip"><span class="chip-color low-chip"></span> Low</span>
             </div>
           </div>
           <div class="table-responsive-container">
@@ -1078,7 +1015,7 @@ function renderLiveSheetTab(rows, visId, tabName) {
               <thead>
                 <tr>
                   <th class="sticky-col">Manager</th>
-                  <th>PPG Avg</th>
+                  <th>Avg</th>
                   ${activeWeeks.map(w => `<th>${w.label}</th>`).join('')}
                   <th>High</th>
                   <th>Low</th>
@@ -1087,12 +1024,7 @@ function renderLiveSheetTab(rows, visId, tabName) {
               <tbody>
                 ${ptsRows.map(item => `
                   <tr>
-                    <td class="sticky-col">
-                      <div class="team-identity">
-                        <span class="team-title-bold">${item.manager}</span>
-                        <span class="manager-sub">${item.team}</span>
-                      </div>
-                    </td>
+                    <td class="sticky-col"><span class="team-title-bold">${item.manager}</span></td>
                     <td class="bold-stat accent-text">${item.avg.toFixed(1)}</td>
                     ${item.scores.map(s => {
                       const isHigh = s === item.high && s > 0;
@@ -1129,7 +1061,7 @@ function renderLiveSheetTab(rows, visId, tabName) {
         });
         if (hasRank) {
           const wkNum = h.replace(/^week\s*/i, '');
-          activeWeeks.push({ col: c, label: `Week ${wkNum}` });
+          activeWeeks.push({ col: c, wkNum: wkNum, label: `W${wkNum}` });
         }
       }
     }
@@ -1144,7 +1076,6 @@ function renderLiveSheetTab(rows, visId, tabName) {
       rnkRows.push({
         seasonRank,
         manager: mgr.name,
-        team: mgr.team,
         avg: avgRank,
         ranks
       });
@@ -1156,11 +1087,11 @@ function renderLiveSheetTab(rows, visId, tabName) {
       return `
         <div class="vis-view-wrapper">
           <div class="vis-control-bar">
-            <span class="vis-note">🟢 Live scoring ranks from tab <b>"${tabName}"</b></span>
+            <span class="vis-note">🟢 Live scoring ranks from tab <b>"${tabName}"</b> (1-14 Gradient Scale)</span>
             <div class="vis-legend">
-              <span class="legend-chip"><span class="chip-color rank-top-chip"></span> Top 3 (#1-#3)</span>
-              <span class="legend-chip"><span class="chip-color rank-mid-chip"></span> Mid (#4-#9)</span>
-              <span class="legend-chip"><span class="chip-color rank-bot-chip"></span> Bottom (#10-#14)</span>
+              <span class="legend-chip"><span class="chip-color rank-top-chip"></span> #1 Best</span>
+              <span class="legend-chip"><span class="chip-color rank-mid-chip"></span> #7 Mid</span>
+              <span class="legend-chip"><span class="chip-color rank-bot-chip"></span> #14 Worst</span>
             </div>
           </div>
           <div class="table-responsive-container">
@@ -1168,34 +1099,20 @@ function renderLiveSheetTab(rows, visId, tabName) {
               <thead>
                 <tr>
                   <th class="sticky-col">Manager</th>
-                  <th>Season Rank</th>
-                  <th>Avg Rank</th>
+                  <th>Rank</th>
+                  <th>Avg</th>
                   ${activeWeeks.map(w => `<th>${w.label}</th>`).join('')}
                 </tr>
               </thead>
               <tbody>
-                ${rnkRows.map(item => {
-                  const rankBadge = item.seasonRank === 1 ? 'gold-rank' : item.seasonRank === 2 ? 'silver-rank' : item.seasonRank === 3 ? 'bronze-rank' : 'standard-rank';
-                  return `
-                    <tr>
-                      <td class="sticky-col">
-                        <div class="team-identity-sticky">
-                          <span class="rank-circle ${rankBadge}">#${item.seasonRank}</span>
-                          <div class="team-identity">
-                            <span class="team-title-bold">${item.manager}</span>
-                            <span class="manager-sub">${item.team}</span>
-                          </div>
-                        </div>
-                      </td>
-                      <td><span class="rank-circle ${rankBadge}">#${item.seasonRank}</span></td>
-                      <td class="bold-stat">#${item.avg}</td>
-                      ${item.ranks.map(r => {
-                        const badgeClass = r <= 3 ? 'rank-cell-top' : r >= 10 ? 'rank-cell-bottom' : 'rank-cell-mid';
-                        return `<td><span class="rank-pill-box ${badgeClass}">#${r}</span></td>`;
-                      }).join('')}
-                    </tr>
-                  `;
-                }).join('')}
+                ${rnkRows.map(item => `
+                  <tr>
+                    <td class="sticky-col"><span class="team-title-bold">${item.manager}</span></td>
+                    <td><span class="rank-box" style="${getRankGradientStyle(item.seasonRank)}">#${item.seasonRank}</span></td>
+                    <td><span class="rank-box-wide" style="${getRankGradientStyle(item.avg)}">#${item.avg}</span></td>
+                    ${item.ranks.map(r => `<td><span class="rank-box" style="${getRankGradientStyle(r)}">${r}</span></td>`).join('')}
+                  </tr>
+                `).join('')}
               </tbody>
             </table>
           </div>
@@ -1212,12 +1129,13 @@ function renderLiveSheetTab(rows, visId, tabName) {
       if (!mgr) continue;
 
       const idx = mgr.index;
-      const team = (r[idx + 1] && isNaN(r[idx + 1]) ? r[idx + 1].trim() : mgr.team);
-      const expW = parseFloat(r[idx + 2]) || 0;
-      const expL = parseFloat(r[idx + 3]) || 0;
-      const actualW = parseInt(r[idx + 4], 10) || 0;
-      const actualL = parseInt(r[idx + 5], 10) || 0;
-      const diff = parseFloat(r[idx + 6]) || (actualW - expW);
+      const hasTeamCol = isNaN(parseFloat(r[idx + 1])) && (r[idx + 1] || '').trim().length > 0 && !/^\d+(\.\d+)?$/.test((r[idx + 1] || '').trim());
+      const offset = hasTeamCol ? 1 : 0;
+      const expW = parseFloat(r[idx + offset + 1]) || 0;
+      const expL = parseFloat(r[idx + offset + 2]) || 0;
+      const actualW = parseInt(r[idx + offset + 3], 10) || 0;
+      const actualL = parseInt(r[idx + offset + 4], 10) || 0;
+      const diff = parseFloat(r[idx + offset + 5]) || (actualW - expW);
 
       const actualTotal = actualW + actualL;
       const expTotal = expW + expL;
@@ -1225,11 +1143,10 @@ function renderLiveSheetTab(rows, visId, tabName) {
       const expWinPct = expTotal > 0 ? (expW / expTotal) : 0;
 
       const luckClass = diff >= 0.2 ? 'luck-lucky' : diff <= -0.2 ? 'luck-unlucky' : 'luck-neutral';
-      const status = diff >= 0.7 ? 'Extremely Lucky' : diff >= 0.2 ? 'Slightly Lucky' : diff <= -0.7 ? 'Heartbroken (Very Unlucky)' : diff <= -0.2 ? 'Tough Luck' : 'Fair (Even)';
+      const status = diff >= 0.7 ? 'Extremely Lucky' : diff >= 0.2 ? 'Slightly Lucky' : diff <= -0.7 ? 'Heartbroken' : diff <= -0.2 ? 'Tough Luck' : 'Fair (Even)';
 
       expRows.push({
         manager: mgr.name,
-        team,
         actualW,
         actualL,
         expW,
@@ -1249,38 +1166,29 @@ function renderLiveSheetTab(rows, visId, tabName) {
         <div class="vis-view-wrapper">
           <div class="vis-control-bar">
             <span class="vis-note">🟢 Live data from tab <b>"${tabName}"</b> • All-Play Expected Record & Luck</span>
-            <div class="vis-legend">
-              <span class="legend-chip"><span class="chip-color high-chip"></span> Positive Luck</span>
-              <span class="legend-chip"><span class="chip-color low-chip"></span> Unlucky</span>
-            </div>
           </div>
           <div class="table-responsive-container">
             <table class="vis-table">
               <thead>
                 <tr>
                   <th class="sticky-col">Manager</th>
-                  <th>Actual Record</th>
-                  <th>Expected Record</th>
-                  <th>Luck Diff</th>
-                  <th>Luck Status</th>
-                  <th>Actual Win %</th>
-                  <th>Expected Win %</th>
+                  <th>Record</th>
+                  <th>Exp Rec</th>
+                  <th>Luck</th>
+                  <th>Status</th>
+                  <th>Win%</th>
+                  <th>Exp%</th>
                 </tr>
               </thead>
               <tbody>
                 ${expRows.map(item => `
                   <tr>
-                    <td class="sticky-col">
-                      <div class="team-identity">
-                        <span class="team-title-bold">${item.manager}</span>
-                        <span class="manager-sub">${item.team}</span>
-                      </div>
-                    </td>
+                    <td class="sticky-col"><span class="team-title-bold">${item.manager}</span></td>
                     <td><span class="record-badge">${item.actualW}-${item.actualL}</span></td>
                     <td class="bold-stat">${item.expW.toFixed(2)}-${item.expL.toFixed(2)}</td>
                     <td>
                       <span class="luck-badge ${item.luckClass}">
-                        ${item.diff > 0 ? '+' : ''}${item.diff.toFixed(2)} Wins
+                        ${item.diff > 0 ? '+' : ''}${item.diff.toFixed(2)}
                       </span>
                     </td>
                     <td><span class="status-pill">${item.status}</span></td>
@@ -1313,7 +1221,7 @@ function renderLiveSheetTab(rows, visId, tabName) {
         });
         if (hasRank) {
           const wkNum = h.replace(/^week\s*/i, '');
-          activeWeeks.push({ col: c, label: `Week ${wkNum}` });
+          activeWeeks.push({ col: c, wkNum: wkNum, label: `W${wkNum}` });
         }
       }
     }
@@ -1325,18 +1233,15 @@ function renderLiveSheetTab(rows, visId, tabName) {
       let avgOppRank = parseFloat(r[idx + 1]) || 7.0;
       const oppRanks = activeWeeks.map(w => parseInt(r[w.col], 10) || 0);
 
-      const diffLabel = avgOppRank <= 4.0 ? 'Gauntlet / Brutal' : avgOppRank <= 6.0 ? 'Very Hard' : avgOppRank <= 7.5 ? 'Hard' : avgOppRank <= 9.0 ? 'Average' : 'Favorable / Soft';
+      const diffLabel = avgOppRank <= 4.0 ? 'Brutal' : avgOppRank <= 6.0 ? 'V. Hard' : avgOppRank <= 7.5 ? 'Hard' : avgOppRank <= 9.0 ? 'Average' : 'Soft';
       const diffBadge = avgOppRank <= 4.0 ? 'diff-brutal' : avgOppRank <= 7.5 ? 'diff-hard' : avgOppRank <= 9.0 ? 'diff-medium' : 'diff-soft';
-      const diffPercent = Math.max(10, Math.min(100, ((15 - avgOppRank) / 14) * 100));
 
       sosRows.push({
         sosRank,
         manager: mgr.name,
-        team: mgr.team,
         avgOppRank,
         diffLabel,
         diffBadge,
-        diffPercent,
         oppRanks
       });
     }
@@ -1347,42 +1252,27 @@ function renderLiveSheetTab(rows, visId, tabName) {
       return `
         <div class="vis-view-wrapper">
           <div class="vis-control-bar">
-            <span class="vis-note">🟢 Live Strength of Schedule from tab <b>"${tabName}"</b></span>
+            <span class="vis-note">🟢 Live Strength of Schedule from tab <b>"${tabName}"</b> (1-14 Gradient Scale)</span>
           </div>
           <div class="table-responsive-container">
             <table class="vis-table">
               <thead>
                 <tr>
                   <th class="sticky-col">Manager</th>
-                  <th>SoS Rank</th>
-                  <th>Opponent Avg Rank</th>
-                  <th>Difficulty Rating</th>
-                  ${activeWeeks.map(w => `<th>${w.label} Opp Rank</th>`).join('')}
+                  <th>SoS</th>
+                  <th>Opp Avg</th>
+                  <th>Difficulty</th>
+                  ${activeWeeks.map(w => `<th>${w.label}</th>`).join('')}
                 </tr>
               </thead>
               <tbody>
                 ${sosRows.map(item => `
                   <tr>
-                    <td class="sticky-col">
-                      <div class="team-identity-sticky">
-                        <span class="rank-circle standard-rank">#${item.sosRank}</span>
-                        <div class="team-identity">
-                          <span class="team-title-bold">${item.manager}</span>
-                          <span class="manager-sub">${item.team}</span>
-                        </div>
-                      </div>
-                    </td>
-                    <td><span class="rank-circle standard-rank">#${item.sosRank}</span></td>
-                    <td class="bold-stat">#${item.avgOppRank.toFixed(2)}</td>
-                    <td>
-                      <div class="sos-bar-cell">
-                        <span class="diff-badge ${item.diffBadge}">${item.diffLabel}</span>
-                        <div class="mini-progress-track">
-                          <div class="mini-progress-fill ${item.diffBadge}" style="width: ${item.diffPercent}%"></div>
-                        </div>
-                      </div>
-                    </td>
-                    ${item.oppRanks.map(r => `<td><span class="rank-pill-box ${r <= 3 ? 'rank-cell-bottom' : r >= 10 ? 'rank-cell-top' : 'rank-cell-mid'}">#${r}</span></td>`).join('')}
+                    <td class="sticky-col"><span class="team-title-bold">${item.manager}</span></td>
+                    <td><span class="rank-box" style="${getRankGradientStyle(item.sosRank)}">#${item.sosRank}</span></td>
+                    <td><span class="rank-box-wide" style="${getRankGradientStyle(item.avgOppRank)}">#${item.avgOppRank.toFixed(2)}</span></td>
+                    <td><span class="diff-badge ${item.diffBadge}">${item.diffLabel}</span></td>
+                    ${item.oppRanks.map(r => `<td><span class="rank-box" style="${getRankGradientStyle(r)}">${r}</span></td>`).join('')}
                   </tr>
                 `).join('')}
               </tbody>

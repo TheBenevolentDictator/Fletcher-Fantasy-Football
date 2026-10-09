@@ -646,35 +646,35 @@ body {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: 10px;
-  padding: 1.25rem;
+  padding: 0.75rem 0.6rem;
   overflow: hidden;
 }
 
 .vis-view-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 0.65rem;
 }
 
 /* Summary Banner */
 .vis-summary-banner {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.5rem;
 }
 
 .summary-metric-card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 0.85rem 1rem;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.15rem;
 }
 
 .metric-label {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   color: var(--text-secondary);
   text-transform: uppercase;
   font-weight: 700;
@@ -682,7 +682,7 @@ body {
 }
 
 .metric-val {
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   font-weight: 800;
   color: #ffffff;
 }
@@ -771,8 +771,8 @@ body {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  font-size: 0.82rem;
-  text-align: left;
+  font-size: 0.8rem;
+  text-align: center;
   white-space: nowrap;
 }
 
@@ -780,18 +780,20 @@ body {
   background: #0d0d0d;
   color: var(--text-secondary);
   font-weight: 700;
-  padding: 0.75rem 0.85rem;
+  padding: 0.45rem 0.55rem;
   border-bottom: 1px solid var(--border-color);
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
+  text-align: center;
 }
 
 .vis-table td {
-  padding: 0.75rem 0.85rem;
+  padding: 0.38rem 0.55rem;
   border-bottom: 1px solid rgba(38, 38, 38, 0.7);
   color: var(--text-primary);
   vertical-align: middle;
+  text-align: center;
 }
 
 .vis-table tr:last-child td {
@@ -811,6 +813,9 @@ body {
   z-index: 10;
   box-shadow: 3px 0 8px -2px rgba(0, 0, 0, 0.8);
   border-right: 1px solid var(--border-color);
+  text-align: left;
+  padding-left: 0.65rem;
+  padding-right: 0.65rem;
 }
 
 .vis-table td.sticky-col {
@@ -820,6 +825,9 @@ body {
   z-index: 5;
   box-shadow: 3px 0 8px -2px rgba(0, 0, 0, 0.8);
   border-right: 1px solid var(--border-color);
+  text-align: left;
+  padding-left: 0.65rem;
+  padding-right: 0.65rem;
 }
 
 .vis-table tr:hover td.sticky-col {
@@ -829,7 +837,7 @@ body {
 .team-identity-sticky {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
+  gap: 0.5rem;
 }
 
 /* Team Identity Cell */
@@ -979,10 +987,34 @@ body {
   color: var(--text-secondary);
 }
 
-/* Rank Matrix Pills */
+/* Rank Matrix Pills & Gradient Boxes */
+.rank-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 0.25rem;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.rank-box-wide {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.12rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
 .rank-pill-box {
   display: inline-block;
-  padding: 0.2rem 0.5rem;
+  padding: 0.18rem 0.45rem;
   border-radius: 4px;
   font-weight: 700;
   font-size: 0.75rem;
@@ -1007,10 +1039,50 @@ body {
   border: 1px solid rgba(239, 68, 68, 0.35);
 }
 
+/* W-L Heatmap Chips */
+.heat-chip-stack {
+  display: flex;
+  gap: 0.28rem;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.heat-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 0.35rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.heat-chip.win-chip {
+  background: rgba(34, 197, 94, 0.28) !important;
+  color: #4ade80 !important;
+  border: 1px solid rgba(34, 197, 94, 0.5) !important;
+}
+
+.heat-chip.loss-chip {
+  background: rgba(239, 68, 68, 0.28) !important;
+  color: #f87171 !important;
+  border: 1px solid rgba(239, 68, 68, 0.5) !important;
+}
+
+.chip-flag {
+  font-size: 0.72rem;
+  line-height: 1;
+}
+
 /* Luck Badges */
 .luck-badge {
   display: inline-block;
-  padding: 0.25rem 0.5rem;
+  padding: 0.18rem 0.45rem;
   border-radius: 4px;
   font-weight: 700;
   font-size: 0.75rem;
