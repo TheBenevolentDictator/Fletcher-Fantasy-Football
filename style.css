@@ -177,6 +177,72 @@ body {
   margin-top: 2px;
 }
 
+.brand-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.sidebar-collapse-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s ease;
+  line-height: 1;
+}
+
+.sidebar-collapse-btn:hover {
+  background: var(--bg-card-hover);
+  color: #ffffff;
+  border-color: var(--accent);
+}
+
+.sidebar-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 700;
+  font-size: 0.76rem;
+  padding: 0.35rem 0.65rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sidebar-toggle-btn:hover {
+  color: #ffffff;
+  border-color: var(--accent);
+  background: var(--bg-card-hover);
+}
+
+.sidebar-toggle-btn.is-hidden {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(243, 113, 33, 0.12);
+}
+
+/* Hub Container Sidebar Hidden State */
+.hub-container.sidebar-hidden .sidebar {
+  display: none !important;
+}
+
+.hub-container.sidebar-hidden .viewer-stage {
+  width: 100% !important;
+  max-width: 100% !important;
+  flex: 1 1 100% !important;
+}
+
 .badge {
   font-size: 0.7rem;
   background: var(--bg-card);
@@ -757,14 +823,16 @@ body {
   color: #ffffff;
 }
 
-/* Responsive Table */
+/* Responsive & Scrollable Table Container */
 .table-responsive-container {
   width: 100%;
-  overflow-x: auto;
+  max-height: 72vh; /* Contained scrolling instead of full page scrolling */
+  overflow: auto; /* Both horizontal and vertical scrolling within this container */
   -webkit-overflow-scrolling: touch;
   border: 1px solid var(--border-color);
   border-radius: 8px;
   background: var(--bg-card);
+  position: relative;
 }
 
 .vis-table {
@@ -776,16 +844,49 @@ body {
   white-space: nowrap;
 }
 
+/* Frozen Sticky Table Header (Vertical Scroll) */
 .vis-table th {
-  background: #0d0d0d;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #0d0d0d !important;
   color: var(--text-secondary);
   font-weight: 700;
   padding: 0.45rem 0.55rem;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 2px solid var(--border-color);
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.45);
+}
+
+/* Sortable Column Headers */
+.vis-table th.sortable-header {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.vis-table th.sortable-header:hover {
+  background: #181818 !important;
+  color: #ffffff;
+}
+
+.sort-indicator {
+  display: inline-block;
+  margin-left: 0.35rem;
+  font-size: 0.65rem;
+  opacity: 0.45;
+  vertical-align: middle;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+
+.vis-table th.sorted-asc .sort-indicator,
+.vis-table th.sorted-desc .sort-indicator {
+  opacity: 1;
+  color: var(--accent);
+  font-weight: 900;
 }
 
 .vis-table td {
@@ -810,9 +911,10 @@ body {
   left: 0;
   top: 0;
   background: #0d0d0d !important;
-  z-index: 10;
-  box-shadow: 3px 0 8px -2px rgba(0, 0, 0, 0.8);
+  z-index: 25; /* Higher than regular th and td.sticky-col */
+  box-shadow: 3px 2px 8px -1px rgba(0, 0, 0, 0.9);
   border-right: 1px solid var(--border-color);
+  border-bottom: 2px solid var(--border-color);
   text-align: left;
   padding-left: 0.65rem;
   padding-right: 0.65rem;
@@ -1108,6 +1210,17 @@ body {
 .status-pill {
   font-size: 0.72rem;
   color: var(--text-secondary);
+}
+
+.status-pill.status-rigged {
+  display: inline-block;
+  padding: 0.12rem 0.45rem;
+  border-radius: 4px;
+  background: rgba(239, 68, 68, 0.25);
+  color: #ef4444;
+  font-weight: 800;
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  letter-spacing: 0.05em;
 }
 
 /* Heatmap Special Styles */

@@ -24,6 +24,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const fsBtn = document.getElementById("fullscreen-btn");
   const fsCloseBtn = document.getElementById("fs-close-btn");
 
+  // Sidebar Controls
+  const hubContainer = document.querySelector(".hub-container");
+  const sidebarToggleBtn = document.getElementById("sidebar-toggle-btn");
+  const sidebarCollapseBtn = document.getElementById("sidebar-collapse-btn");
+
   // Sheet Sync Modal Elements
   const sheetSyncBtn = document.getElementById("sheet-sync-btn");
   const sheetModal = document.getElementById("sheet-modal");
@@ -118,6 +123,49 @@ document.addEventListener("DOMContentLoaded", () => {
       document.body.style.overflow = "";
     }
   });
+
+  // 3. Sidebar Hide / Show Toggle
+  function setSidebarHidden(hidden) {
+    if (!hubContainer) return;
+    hubContainer.classList.toggle("sidebar-hidden", hidden);
+    localStorage.setItem("ffl_sidebar_hidden", hidden ? "true" : "false");
+
+    if (sidebarToggleBtn) {
+      const icon = sidebarToggleBtn.querySelector(".toggle-icon");
+      const text = sidebarToggleBtn.querySelector(".toggle-text");
+      if (hidden) {
+        if (icon) icon.textContent = "▶";
+        if (text) text.textContent = "Show Menu";
+        sidebarToggleBtn.classList.add("is-hidden");
+        sidebarToggleBtn.title = "Show Sidebar Menu";
+      } else {
+        if (icon) icon.textContent = "◀";
+        if (text) text.textContent = "Hide Menu";
+        sidebarToggleBtn.classList.remove("is-hidden");
+        sidebarToggleBtn.title = "Hide Sidebar Menu";
+      }
+    }
+  }
+
+  function initSidebarToggle() {
+    const isHidden = localStorage.getItem("ffl_sidebar_hidden") === "true";
+    setSidebarHidden(isHidden);
+
+    if (sidebarToggleBtn) {
+      sidebarToggleBtn.addEventListener("click", () => {
+        const currentlyHidden = hubContainer && hubContainer.classList.contains("sidebar-hidden");
+        setSidebarHidden(!currentlyHidden);
+      });
+    }
+
+    if (sidebarCollapseBtn) {
+      sidebarCollapseBtn.addEventListener("click", () => {
+        setSidebarHidden(true);
+      });
+    }
+  }
+
+  initSidebarToggle();
 
   // 3. Section Switcher: Decks vs Data Vis
   function switchSection(section) {
@@ -260,6 +308,111 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // Table Sorting Utility for Data Columns
+  function initTableSorting(container) {
+    if (!container) return;
+    const tables = container.querySelectorAll("table.vis-table");
+    tables.forEach((table) => {
+      const thead = table.querySelector("thead");
+      const tbody = table.querySelector("tbody");
+      if (!thead || !tbody) return;
+
+      const headerRow = thead.querySelector("tr");
+      if (!headerRow) return;
+      const headers = headerRow.querySelectorAll("th");
+      if (headers.length === 0) return;
+
+      headers.forEach((th, colIdx) => {
+        th.classList.add("sortable-header");
+        th.setAttribute("title", "Click to sort by " + (th.textContent || "").replace(/[▲▼⇅]/g, "").trim());
+
+        let indicator = th.querySelector(".sort-indicator");
+        if (!indicator) {
+          indicator = document.createElement("span");
+          indicator.className = "sort-indicator";
+          indicator.textContent = "⇅";
+          th.appendChild(indicator);
+        }
+
+        th.onclick = () => {
+          const currentDir = th.getAttribute("data-sort-dir");
+          const newDir = currentDir === "asc" ? "desc" : "asc";
+
+          headers.forEach((otherTh) => {
+            otherTh.removeAttribute("data-sort-dir");
+            otherTh.classList.remove("sorted-asc", "sorted-desc");
+            const ind = otherTh.querySelector(".sort-indicator");
+            if (ind) ind.textContent = "⇅";
+          });
+
+          th.setAttribute("data-sort-dir", newDir);
+          th.classList.add(newDir === "asc" ? "sorted-asc" : "sorted-desc");
+          indicator.textContent = newDir === "asc" ? "▲" : "▼";
+
+          const rows = Array.from(tbody.querySelectorAll("tr"));
+
+          function getSortKey(row) {
+            const cell = row.children[colIdx];
+            if (!cell) return { type: 'empty', val: 0 };
+
+            // Check if cell contains heat-chips (e.g. Wins or Losses column in Heatmap)
+            const chips = cell.querySelectorAll(".heat-chip");
+            if (chips.length > 0) {
+              return { type: 'num', val: chips.length };
+            }
+
+            const raw = (cell.textContent || "").trim();
+            if (raw === "—" || raw === "" || raw === "-") {
+              return { type: 'empty', val: 0 };
+            }
+
+            // Check if it's a win-loss record like "4-0" or "2-2"
+            const recMatch = raw.match(/^(\d+)[-–](\d+)$/);
+            if (recMatch) {
+              const w = parseInt(recMatch[1], 10);
+              const l = parseInt(recMatch[2], 10);
+              const pct = (w + l) > 0 ? (w / (w + l)) : 0;
+              return { type: 'record', val: pct * 1000 + w };
+            }
+
+            // Clean number string (remove #, +, %, commas, flags, indicators)
+            const clean = raw.replace(/[🍀🔥▲▼➟➚➘#+%]/g, '').replace(/,/g, '').trim();
+            const num = parseFloat(clean);
+            if (!isNaN(num) && clean !== '') {
+              return { type: 'num', val: num };
+            }
+
+            return { type: 'text', val: raw.toLowerCase() };
+          }
+
+          rows.sort((rowA, rowB) => {
+            const keyA = getSortKey(rowA);
+            const keyB = getSortKey(rowB);
+
+            // Empty / dash cells sink to bottom
+            if (keyA.type === 'empty' && keyB.type === 'empty') return 0;
+            if (keyA.type === 'empty') return 1;
+            if (keyB.type === 'empty') return -1;
+
+            if (keyA.type === keyB.type) {
+              if (keyA.type === 'text') {
+                return newDir === 'asc' ? keyA.val.localeCompare(keyB.val) : keyB.val.localeCompare(keyA.val);
+              }
+              return newDir === 'asc' ? keyA.val - keyB.val : keyB.val - keyA.val;
+            }
+
+            if (typeof keyA.val === 'number' && typeof keyB.val === 'number') {
+              return newDir === 'asc' ? keyA.val - keyB.val : keyB.val - keyA.val;
+            }
+            return newDir === 'asc' ? String(keyA.val).localeCompare(String(keyB.val)) : String(keyB.val).localeCompare(String(keyA.val));
+          });
+
+          rows.forEach((r) => tbody.appendChild(r));
+        };
+      });
+    });
+  }
+
   const liveTabCache = {};
 
   async function loadVisualization(visId) {
@@ -316,6 +469,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (liveTabCache[tabName]) {
         if (datavisContent) {
           datavisContent.innerHTML = window.FFL_DATA.renderLiveSheetTab(liveTabCache[tabName], visId, tabName);
+          initTableSorting(datavisContent);
         }
         return;
       }
@@ -336,6 +490,7 @@ document.addEventListener("DOMContentLoaded", () => {
           liveTabCache[tabName] = rows;
           if (activeVisId === visId && datavisContent) {
             datavisContent.innerHTML = window.FFL_DATA.renderLiveSheetTab(rows, visId, tabName);
+            initTableSorting(datavisContent);
           }
           return;
         }
@@ -348,6 +503,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const renderer = window.FFL_DATA.renderers[visId];
     if (renderer && datavisContent) {
       datavisContent.innerHTML = renderer(activeLeagueData);
+      initTableSorting(datavisContent);
     }
   }
 

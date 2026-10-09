@@ -107,7 +107,7 @@ const DEFAULT_LEAGUE_DATA = {
   ],
 
   expectedRecord: [
-    { rank: 1, team: "Mahomes Magic", manager: "Dan", actualW: 4, actualL: 1, expW: 44, expL: 11, expWinPct: 0.800, actualWinPct: 0.800, luckDiff: 0.0, status: "Fair (Even)" },
+    { rank: 1, team: "Mahomes Magic", manager: "Dan", actualW: 4, actualL: 1, expW: 44, expL: 11, expWinPct: 0.800, actualWinPct: 0.800, luckDiff: 0.0, status: "Fair" },
     { rank: 2, team: "Bijan Mustard", manager: "Mike", actualW: 4, actualL: 1, expW: 41, expL: 14, expWinPct: 0.745, actualWinPct: 0.800, luckDiff: 0.3, status: "Slightly Lucky" },
     { rank: 3, team: "Run CMC", manager: "Alex", actualW: 3, actualL: 2, expW: 39, expL: 16, expWinPct: 0.709, actualWinPct: 0.600, luckDiff: -0.5, status: "Tough Luck" },
     { rank: 4, team: "CeeDee Lambos", manager: "Chris", actualW: 4, actualL: 1, expW: 33, expL: 22, expWinPct: 0.600, actualWinPct: 0.800, luckDiff: 1.0, status: "Lucky (+1.0 Win)" },
@@ -374,13 +374,15 @@ async function fetchGoogleSheetTab(sheetId, tabName, visId) {
 
 // 6. View Renderers
 
-// Color gradient scale for ranks 1 to 14 (1 = Green, 7.5 = Yellow, 14 = Red)
-function getRankGradientStyle(val) {
+// Color gradient scale for ranks 1 to 14
+// Standard: #1 is Green (best), #7.5 is Yellow, #14 is Red (worst)
+// Inverted: #1 is Red (hardest schedule), #7.5 is Yellow, #14 is Green (easiest schedule)
+function getRankGradientStyle(val, inverted = false) {
   const r = parseFloat(val);
   if (isNaN(r) || r < 1) return '';
   const clamped = Math.max(1, Math.min(14, r));
-  const t = (clamped - 1) / 13; // 0 (best) to 1 (worst)
-  const hue = Math.round((1 - t) * 130); // 130 (green) down to 0 (red), 65 = yellow
+  const t = (clamped - 1) / 13; // 0 for #1, 1 for #14
+  const hue = Math.round((inverted ? t : (1 - t)) * 130);
   return `background: hsla(${hue}, 70%, 20%, 0.5); color: hsl(${hue}, 85%, 68%); border: 1px solid hsla(${hue}, 70%, 42%, 0.45);`;
 }
 
@@ -603,8 +605,8 @@ function renderHeatmap(data) {
         <div class="vis-legend">
           <span class="legend-chip"><span class="chip-color heatmap-win-chip"></span> Win</span>
           <span class="legend-chip"><span class="chip-color heatmap-loss-chip"></span> Loss</span>
-          <span class="legend-chip">🔥 Bad Beat</span>
-          <span class="legend-chip">🍀 Bailout</span>
+          <span class="legend-chip">🔥 Bad Beat (Lost ≤#5)</span>
+          <span class="legend-chip">🍀 Bailout (Won ≥#10)</span>
         </div>
       </div>
 
@@ -623,7 +625,7 @@ function renderHeatmap(data) {
                 ${item.weeks.map(w => {
                   const isWin = w.result === 'W';
                   const chipClass = isWin ? 'win-chip' : 'loss-chip';
-                  const flag = w.note === 'bad-beat' ? '<span class="chip-flag">🔥</span>' : w.note === 'bailout' ? '<span class="chip-flag">🍀</span>' : '';
+                  const flag = (isWin && w.rank >= 10) ? '<span class="chip-flag">🍀</span>' : (!isWin && w.rank <= 5) ? '<span class="chip-flag">🔥</span>' : '';
                   return `
                     <td>
                       <span class="heat-chip ${chipClass}">
@@ -648,7 +650,12 @@ function renderStrengthOfSchedule(data) {
   return `
     <div class="vis-view-wrapper">
       <div class="vis-control-bar">
-        <span class="vis-note">🛡️ Strength of Schedule</span>
+        <span class="vis-note">🛡️ Strength of Schedule (Inverted: #1 Hardest Red ➔ #14 Easiest Green)</span>
+        <div class="vis-legend">
+          <span class="legend-chip"><span class="chip-color rank-bot-chip"></span> #1 Hardest</span>
+          <span class="legend-chip"><span class="chip-color rank-mid-chip"></span> #7 Mid</span>
+          <span class="legend-chip"><span class="chip-color rank-top-chip"></span> #14 Easiest</span>
+        </div>
       </div>
 
       <div class="table-responsive-container">
@@ -667,8 +674,8 @@ function renderStrengthOfSchedule(data) {
             ${list.map(item => `
               <tr>
                 <td class="sticky-col"><span class="team-title-bold">${item.manager}</span></td>
-                <td><span class="rank-box" style="${getRankGradientStyle(item.rank)}">#${item.rank}</span></td>
-                <td><span class="rank-box-wide" style="${getRankGradientStyle(item.oppAvgRank)}">#${item.oppAvgRank.toFixed(1)}</span></td>
+                <td><span class="rank-box" style="${getRankGradientStyle(item.rank, true)}">#${item.rank}</span></td>
+                <td><span class="rank-box-wide" style="${getRankGradientStyle(item.oppAvgRank, true)}">#${item.oppAvgRank.toFixed(1)}</span></td>
                 <td><span class="diff-badge ${item.badgeClass}">${item.difficulty}</span></td>
                 <td>${item.totalPA.toFixed(1)}</td>
                 <td>${item.avgPA.toFixed(1)}</td>
@@ -782,8 +789,8 @@ function renderLiveSheetTab(rows, visId, tabName) {
             <div class="vis-legend">
               <span class="legend-chip"><span class="chip-color heatmap-win-chip"></span> Win</span>
               <span class="legend-chip"><span class="chip-color heatmap-loss-chip"></span> Loss</span>
-              <span class="legend-chip">🔥 Bad Beat (Lost ≤#6)</span>
-              <span class="legend-chip">🍀 Bailout (Won ≥#7)</span>
+              <span class="legend-chip">🔥 Bad Beat (Lost ≤#5)</span>
+              <span class="legend-chip">🍀 Bailout (Won ≥#10)</span>
             </div>
           </div>
           <div class="table-responsive-container">
@@ -808,8 +815,8 @@ function renderLiveSheetTab(rows, visId, tabName) {
                     <td>
                       <div class="heat-chip-stack">
                         ${item.wins.length === 0 ? '<span class="muted-stat">—</span>' : item.wins.map(w => `
-                          <span class="heat-chip win-chip" title="${w >= 7 ? 'Bailout Win (scoring rank #' + w + ')' : 'Scoring rank #' + w}">
-                            ${w}${w >= 7 ? '<span class="chip-flag">🍀</span>' : ''}
+                          <span class="heat-chip win-chip" title="${w >= 10 ? 'Bailout Win (scoring rank #' + w + ')' : 'Scoring rank #' + w}">
+                            ${w}${w >= 10 ? '<span class="chip-flag">🍀</span>' : ''}
                           </span>
                         `).join('')}
                       </div>
@@ -817,8 +824,8 @@ function renderLiveSheetTab(rows, visId, tabName) {
                     <td>
                       <div class="heat-chip-stack">
                         ${item.losses.length === 0 ? '<span class="muted-stat">—</span>' : item.losses.map(l => `
-                          <span class="heat-chip loss-chip" title="${l <= 6 ? 'Bad Beat Loss (scoring rank #' + l + ')' : 'Scoring rank #' + l}">
-                            ${l}${l <= 6 ? '<span class="chip-flag">🔥</span>' : ''}
+                          <span class="heat-chip loss-chip" title="${l <= 5 ? 'Bad Beat Loss (scoring rank #' + l + ')' : 'Scoring rank #' + l}">
+                            ${l}${l <= 5 ? '<span class="chip-flag">🔥</span>' : ''}
                           </span>
                         `).join('')}
                       </div>
@@ -1143,7 +1150,7 @@ function renderLiveSheetTab(rows, visId, tabName) {
       const expWinPct = expTotal > 0 ? (expW / expTotal) : 0;
 
       const luckClass = diff >= 0.2 ? 'luck-lucky' : diff <= -0.2 ? 'luck-unlucky' : 'luck-neutral';
-      const status = diff >= 0.7 ? 'Extremely Lucky' : diff >= 0.2 ? 'Slightly Lucky' : diff <= -0.7 ? 'Heartbroken' : diff <= -0.2 ? 'Tough Luck' : 'Fair (Even)';
+      const status = diff >= 0.7 ? 'Extremely Lucky' : diff >= 0.2 ? 'Slightly Lucky' : diff <= -0.7 ? 'RIGGED' : diff <= -0.2 ? 'Tough Luck' : 'Fair';
 
       expRows.push({
         manager: mgr.name,
@@ -1191,7 +1198,7 @@ function renderLiveSheetTab(rows, visId, tabName) {
                         ${item.diff > 0 ? '+' : ''}${item.diff.toFixed(2)}
                       </span>
                     </td>
-                    <td><span class="status-pill">${item.status}</span></td>
+                    <td><span class="status-pill ${item.status === 'RIGGED' ? 'status-rigged' : ''}">${item.status}</span></td>
                     <td>${(item.actualWinPct * 100).toFixed(0)}%</td>
                     <td>${(item.expWinPct * 100).toFixed(0)}%</td>
                   </tr>
@@ -1252,7 +1259,12 @@ function renderLiveSheetTab(rows, visId, tabName) {
       return `
         <div class="vis-view-wrapper">
           <div class="vis-control-bar">
-            <span class="vis-note">🟢 Live Strength of Schedule from tab <b>"${tabName}"</b> (1-14 Gradient Scale)</span>
+            <span class="vis-note">🟢 Live Strength of Schedule from tab <b>"${tabName}"</b> (Inverted: #1 Hardest Red ➔ #14 Easiest Green)</span>
+            <div class="vis-legend">
+              <span class="legend-chip"><span class="chip-color rank-bot-chip"></span> #1 Hardest</span>
+              <span class="legend-chip"><span class="chip-color rank-mid-chip"></span> #7 Mid</span>
+              <span class="legend-chip"><span class="chip-color rank-top-chip"></span> #14 Easiest</span>
+            </div>
           </div>
           <div class="table-responsive-container">
             <table class="vis-table">
@@ -1269,10 +1281,10 @@ function renderLiveSheetTab(rows, visId, tabName) {
                 ${sosRows.map(item => `
                   <tr>
                     <td class="sticky-col"><span class="team-title-bold">${item.manager}</span></td>
-                    <td><span class="rank-box" style="${getRankGradientStyle(item.sosRank)}">#${item.sosRank}</span></td>
-                    <td><span class="rank-box-wide" style="${getRankGradientStyle(item.avgOppRank)}">#${item.avgOppRank.toFixed(2)}</span></td>
+                    <td><span class="rank-box" style="${getRankGradientStyle(item.sosRank, true)}">#${item.sosRank}</span></td>
+                    <td><span class="rank-box-wide" style="${getRankGradientStyle(item.avgOppRank, true)}">#${item.avgOppRank.toFixed(2)}</span></td>
                     <td><span class="diff-badge ${item.diffBadge}">${item.diffLabel}</span></td>
-                    ${item.oppRanks.map(r => `<td><span class="rank-box" style="${getRankGradientStyle(r)}">${r}</span></td>`).join('')}
+                    ${item.oppRanks.map(r => `<td><span class="rank-box" style="${getRankGradientStyle(r, true)}">${r}</span></td>`).join('')}
                   </tr>
                 `).join('')}
               </tbody>
