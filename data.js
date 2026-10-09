@@ -249,7 +249,7 @@ const DEFAULT_LEAGUE_DATA = {
 
   strengthOfSchedule: [
     { rank: 1, team: "Gibbs Me That", manager: "Josh", totalPA: 665.2, avgPA: 133.0, oppAvgRank: 3.2, difficulty: "Gauntlet / Brutal", badgeClass: "diff-brutal" },
-    { rank: 2, team: "Allen Wrench", manager: "Nick", totalPA: 649.3, avgPA: 129.9, oppAvgRank: 4.1, difficulty: "Very Hard", badgeClass: "diff-hard" },
+    { rank: 2, team: "Allen Wrench", manager: "Nick", totalPA: 649.3, avgPA: 129.9, oppAvgRank: 4.1, difficulty: "Tuff", badgeClass: "diff-hard" },
     { rank: 3, team: "Achane Reaction", manager: "Ryan", totalPA: 642.6, avgPA: 128.5, oppAvgRank: 4.6, difficulty: "Hard", badgeClass: "diff-hard" },
     { rank: 4, team: "Breece Lightning", manager: "Tyler", totalPA: 631.1, avgPA: 126.2, oppAvgRank: 5.2, difficulty: "Above Average", badgeClass: "diff-medium" },
     { rank: 5, team: "Kyler the Creator", manager: "Jordan", totalPA: 620.5, avgPA: 124.1, oppAvgRank: 5.8, difficulty: "Average", badgeClass: "diff-medium" },
@@ -312,8 +312,8 @@ const DATA_VIS_ITEMS = [
   },
   {
     id: "strength-of-schedule",
-    title: "Strength of Schedule",
-    shortTitle: "Schedule SoS",
+    title: "Schedule Strength",
+    shortTitle: "Schedule Strength",
     icon: "🛡️",
     badge: "Defense",
     tag: "Difficulty Rating",
@@ -386,6 +386,19 @@ function getRankGradientStyle(val, inverted = false) {
   return `background: hsla(${hue}, 70%, 20%, 0.5); color: hsl(${hue}, 85%, 68%); border: 1px solid hsla(${hue}, 70%, 42%, 0.45);`;
 }
 
+// Percentile gradient scale for Weekly Points
+// 100th percentile = Green (hue 130), 50th percentile = Yellow (hue 65), 0th percentile = Red (hue 0)
+function getScoreGradientStyle(score, minScore, maxScore) {
+  const s = parseFloat(score);
+  if (isNaN(s) || s <= 0) return '';
+  const min = parseFloat(minScore);
+  const max = parseFloat(maxScore);
+  if (isNaN(min) || isNaN(max) || max <= min) return '';
+  const t = Math.max(0, Math.min(1, (s - min) / (max - min))); // 0 (0th %ile) to 1 (100th %ile)
+  const hue = Math.round(t * 130);
+  return `background: hsla(${hue}, 70%, 18%, 0.45); color: hsl(${hue}, 85%, 72%); border: 1px solid hsla(${hue}, 70%, 42%, 0.4); font-weight: 700; border-radius: 4px; padding: 0.1rem 0.25rem; display: inline-block;`;
+}
+
 // RENDERER 1: MASTER POWER RANKINGS
 function renderPowerRankings(data) {
   const list = data.powerRankings || DEFAULT_LEAGUE_DATA.powerRankings;
@@ -454,13 +467,28 @@ function renderWeeklyPoints(data) {
   const list = data.weeklyScores || DEFAULT_LEAGUE_DATA.weeklyScores;
   const weeks = data.weeks || DEFAULT_LEAGUE_DATA.weeks;
 
+  // Calculate min and max per week across all managers for percentile coloring
+  const weekMinMax = weeks.map((w, i) => {
+    const scores = list.map(item => item.scores[i]).filter(s => s > 0);
+    return {
+      min: scores.length ? Math.min(...scores) : 0,
+      max: scores.length ? Math.max(...scores) : 200
+    };
+  });
+  const allAvgs = list.map(item => item.avg).filter(a => a > 0);
+  const avgMinMax = {
+    min: allAvgs.length ? Math.min(...allAvgs) : 0,
+    max: allAvgs.length ? Math.max(...allAvgs) : 200
+  };
+
   return `
     <div class="vis-view-wrapper">
       <div class="vis-control-bar">
-        <span class="vis-note">📊 Weekly points scored per manager</span>
+        <span class="vis-note">📊 Weekly points scored (Percentile Gradient)</span>
         <div class="vis-legend">
-          <span class="legend-chip"><span class="chip-color high-chip"></span> High Score</span>
-          <span class="legend-chip"><span class="chip-color low-chip"></span> Low Score</span>
+          <span class="legend-chip"><span class="chip-color rank-top-chip"></span> 100th %ile (Green)</span>
+          <span class="legend-chip"><span class="chip-color rank-mid-chip"></span> 50th %ile (Yellow)</span>
+          <span class="legend-chip"><span class="chip-color rank-bot-chip"></span> 0th %ile (Red)</span>
         </div>
       </div>
 
@@ -471,23 +499,17 @@ function renderWeeklyPoints(data) {
               <th class="sticky-col">Manager</th>
               <th>Avg</th>
               ${weeks.map((w, i) => `<th>W${i + 1}</th>`).join('')}
-              <th>High</th>
-              <th>Low</th>
             </tr>
           </thead>
           <tbody>
             ${list.map(item => `
               <tr>
                 <td class="sticky-col"><span class="team-title-bold">${item.manager}</span></td>
-                <td class="bold-stat accent-text">${item.avg.toFixed(1)}</td>
-                ${item.scores.map(s => {
-                  const isHigh = s === item.high;
-                  const isLow = s === item.low;
-                  const cellClass = isHigh ? 'score-highlight-high' : isLow ? 'score-highlight-low' : '';
-                  return `<td class="${cellClass}">${s.toFixed(1)}</td>`;
+                <td><span style="${getScoreGradientStyle(item.avg, avgMinMax.min, avgMinMax.max)}">${item.avg.toFixed(1)}</span></td>
+                ${item.scores.map((s, i) => {
+                  const mm = weekMinMax[i] || { min: 0, max: 200 };
+                  return `<td><span style="${getScoreGradientStyle(s, mm.min, mm.max)}">${s.toFixed(1)}</span></td>`;
                 }).join('')}
-                <td class="stat-high">${item.high.toFixed(1)}</td>
-                <td class="stat-low">${item.low.toFixed(1)}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -650,7 +672,7 @@ function renderStrengthOfSchedule(data) {
   return `
     <div class="vis-view-wrapper">
       <div class="vis-control-bar">
-        <span class="vis-note">🛡️ Strength of Schedule (Inverted: #1 Hardest Red ➔ #14 Easiest Green)</span>
+        <span class="vis-note">🛡️ Schedule Strength (Inverted: #1 Hardest Red ➔ #14 Easiest Green)</span>
         <div class="vis-legend">
           <span class="legend-chip"><span class="chip-color rank-bot-chip"></span> #1 Hardest</span>
           <span class="legend-chip"><span class="chip-color rank-mid-chip"></span> #7 Mid</span>
@@ -785,7 +807,7 @@ function renderLiveSheetTab(rows, visId, tabName) {
       return `
         <div class="vis-view-wrapper">
           <div class="vis-control-bar">
-            <span class="vis-note">🟢 Live data from tab <b>"${tabName}"</b> • ${heatRows.length} Managers</span>
+            <span class="vis-note">🟢 Live data from tab <b>"${tabName}"</b></span>
             <div class="vis-legend">
               <span class="legend-chip"><span class="chip-color heatmap-win-chip"></span> Win</span>
               <span class="legend-chip"><span class="chip-color heatmap-loss-chip"></span> Loss</span>
@@ -913,9 +935,9 @@ function renderLiveSheetTab(rows, visId, tabName) {
               <span class="metric-sub">Points / Week</span>
             </div>
             <div class="summary-metric-card">
-              <span class="metric-label">Managers</span>
-              <span class="metric-val">${pwrRows.length}</span>
-              <span class="metric-sub">Active League</span>
+              <span class="metric-label">Scoring Avg</span>
+              <span class="metric-val">${(pwrRows.reduce((sum, r) => sum + r.ppg, 0) / (pwrRows.length || 1)).toFixed(1)}</span>
+              <span class="metric-sub">Points / Week</span>
             </div>
           </div>
           <div class="table-responsive-container">
@@ -1008,13 +1030,28 @@ function renderLiveSheetTab(rows, visId, tabName) {
     if (ptsRows.length > 0) {
       ptsRows.sort((a, b) => b.avg - a.avg);
 
+      // Compute min and max per active week for percentile gradient
+      const weekMinMax = activeWeeks.map((w, wIdx) => {
+        const valid = ptsRows.map(item => item.scores[wIdx]).filter(s => s > 0);
+        return {
+          min: valid.length ? Math.min(...valid) : 0,
+          max: valid.length ? Math.max(...valid) : 200
+        };
+      });
+      const allAvgs = ptsRows.map(item => item.avg).filter(a => a > 0);
+      const avgMinMax = {
+        min: allAvgs.length ? Math.min(...allAvgs) : 0,
+        max: allAvgs.length ? Math.max(...allAvgs) : 200
+      };
+
       return `
         <div class="vis-view-wrapper">
           <div class="vis-control-bar">
-            <span class="vis-note">🟢 Live points from tab <b>"${tabName}"</b> • ${ptsRows.length} Managers</span>
+            <span class="vis-note">🟢 Live points from tab <b>"${tabName}"</b> (Percentile Gradient)</span>
             <div class="vis-legend">
-              <span class="legend-chip"><span class="chip-color high-chip"></span> High</span>
-              <span class="legend-chip"><span class="chip-color low-chip"></span> Low</span>
+              <span class="legend-chip"><span class="chip-color rank-top-chip"></span> 100th %ile (Green)</span>
+              <span class="legend-chip"><span class="chip-color rank-mid-chip"></span> 50th %ile (Yellow)</span>
+              <span class="legend-chip"><span class="chip-color rank-bot-chip"></span> 0th %ile (Red)</span>
             </div>
           </div>
           <div class="table-responsive-container">
@@ -1024,23 +1061,17 @@ function renderLiveSheetTab(rows, visId, tabName) {
                   <th class="sticky-col">Manager</th>
                   <th>Avg</th>
                   ${activeWeeks.map(w => `<th>${w.label}</th>`).join('')}
-                  <th>High</th>
-                  <th>Low</th>
                 </tr>
               </thead>
               <tbody>
                 ${ptsRows.map(item => `
                   <tr>
                     <td class="sticky-col"><span class="team-title-bold">${item.manager}</span></td>
-                    <td class="bold-stat accent-text">${item.avg.toFixed(1)}</td>
-                    ${item.scores.map(s => {
-                      const isHigh = s === item.high && s > 0;
-                      const isLow = s === item.low && s > 0;
-                      const cls = isHigh ? 'score-highlight-high' : isLow ? 'score-highlight-low' : '';
-                      return `<td class="${cls}">${s.toFixed(1)}</td>`;
+                    <td><span style="${getScoreGradientStyle(item.avg, avgMinMax.min, avgMinMax.max)}">${item.avg.toFixed(1)}</span></td>
+                    ${item.scores.map((s, wIdx) => {
+                      const mm = weekMinMax[wIdx] || { min: 0, max: 200 };
+                      return `<td><span style="${getScoreGradientStyle(s, mm.min, mm.max)}">${s.toFixed(1)}</span></td>`;
                     }).join('')}
-                    <td class="stat-high">${item.high.toFixed(1)}</td>
-                    <td class="stat-low">${item.low.toFixed(1)}</td>
                   </tr>
                 `).join('')}
               </tbody>
@@ -1240,7 +1271,7 @@ function renderLiveSheetTab(rows, visId, tabName) {
       let avgOppRank = parseFloat(r[idx + 1]) || 7.0;
       const oppRanks = activeWeeks.map(w => parseInt(r[w.col], 10) || 0);
 
-      const diffLabel = avgOppRank <= 4.0 ? 'Brutal' : avgOppRank <= 6.0 ? 'V. Hard' : avgOppRank <= 7.5 ? 'Hard' : avgOppRank <= 9.0 ? 'Average' : 'Soft';
+      const diffLabel = avgOppRank <= 4.0 ? 'Brutal' : avgOppRank <= 6.0 ? 'Tuff' : avgOppRank <= 7.5 ? 'Hard' : avgOppRank <= 9.0 ? 'Average' : 'Soft';
       const diffBadge = avgOppRank <= 4.0 ? 'diff-brutal' : avgOppRank <= 7.5 ? 'diff-hard' : avgOppRank <= 9.0 ? 'diff-medium' : 'diff-soft';
 
       sosRows.push({
@@ -1259,7 +1290,7 @@ function renderLiveSheetTab(rows, visId, tabName) {
       return `
         <div class="vis-view-wrapper">
           <div class="vis-control-bar">
-            <span class="vis-note">🟢 Live Strength of Schedule from tab <b>"${tabName}"</b> (Inverted: #1 Hardest Red ➔ #14 Easiest Green)</span>
+            <span class="vis-note">🟢 Live Schedule Strength from tab <b>"${tabName}"</b> (Inverted: #1 Hardest Red ➔ #14 Easiest Green)</span>
             <div class="vis-legend">
               <span class="legend-chip"><span class="chip-color rank-bot-chip"></span> #1 Hardest</span>
               <span class="legend-chip"><span class="chip-color rank-mid-chip"></span> #7 Mid</span>
