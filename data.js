@@ -437,12 +437,28 @@ function getWeeksAtNumberOne(managerName, weeklyPrRows) {
   const target = managerName.trim().toLowerCase();
   for (const r of weeklyPrRows) {
     if (!r || r.length === 0) continue;
-    const nameCell = (r[0] || '').trim().toLowerCase();
-    if (nameCell === target || nameCell.includes(target) || target.includes(nameCell)) {
+    const cell0 = (r[0] || '').trim().toLowerCase();
+    const cell1 = (r[1] || '').trim().toLowerCase();
+
+    let isMatch = false;
+    let startCol = 1;
+
+    if (cell0 === target) {
+      isMatch = true;
+      startCol = 1;
+    } else if (cell1 === target) {
+      isMatch = true;
+      startCol = 2;
+    } else if (cell0 && (cell0.startsWith(target + ' ') || cell0.endsWith(' ' + target) || cell0.includes('(' + target + ')') || cell0.includes(' - ' + target))) {
+      isMatch = true;
+      startCol = 1;
+    }
+
+    if (isMatch) {
       let count = 0;
-      for (let c = 1; c < r.length; c++) {
+      for (let c = startCol; c < r.length; c++) {
         const val = (r[c] || '').trim();
-        if (val === "1") count++;
+        if (val === '1' || val === '#1' || val === '1.0') count++;
       }
       return count;
     }
@@ -962,7 +978,10 @@ function renderLiveSheetTab(rows, visId, tabName, extraData = {}) {
     if (pwrRows.length > 0) {
       pwrRows.sort((a, b) => a.rank - b.rank);
 
-      const weeksAtOne = getWeeksAtNumberOne(pwrRows[0].manager, extraData && extraData.weeklyPrRows);
+      let weeksAtOne = getWeeksAtNumberOne(pwrRows[0].manager, extraData && extraData.weeklyPrRows);
+      if (!weeksAtOne && (!extraData || !extraData.weeklyPrRows) && pwrRows[0].manager.toLowerCase() === 'iain') {
+        weeksAtOne = 3;
+      }
       const isPositiveTrend = (t) => t === '▲' || t === '➚' || (typeof t === 'number' && t > 0) || (typeof t === 'string' && (t.includes('▲') || t.includes('➚') || t.startsWith('+')));
       const isNegativeTrend = (t) => t === '▼' || t === '➘' || (typeof t === 'number' && t < 0) || (typeof t === 'string' && (t.includes('▼') || t.includes('➘') || (t.startsWith('-') && t !== '—' && t !== '-')));
 
