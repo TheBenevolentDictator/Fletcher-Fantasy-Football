@@ -40,7 +40,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const sheetStatusIndicator = document.getElementById("sheet-status-indicator");
 
   // State
-  let currentSection = "datavis"; // "decks" | "datavis"
+  let currentSection = "decks"; // "decks" | "datavis"
   let deckItems = [];
   let selectedDeckIndex = 0;
   let activeVisId = "power-rankings";
@@ -694,24 +694,22 @@ document.addEventListener("DOMContentLoaded", () => {
       deckItems = data.filter((item) => item.type === "slides" || !item.type);
       renderDeckList(deckItems);
 
-      // Start on Master Power Rankings in Data Vis section
-      switchSection("datavis");
-      loadVisualization("power-rankings");
+      // Start on Decks section (defaults to index 0, Week 10)
+      switchSection("decks");
     })
     .catch((err) => {
       console.error("Manifest load error:", err);
       // Fallback deck item if content.json fails
       deckItems = [
         {
-          id: "week-1-chart-party",
-          title: "Week 1 Chart Party",
-          date: "2026-09-18",
+          id: "week-10-chart-party",
+          title: "Week 10 Chart Party",
+          date: "2026-11-17",
           type: "slides",
-          src: "https://docs.google.com/presentation/d/e/2PACX-1vQfTOFXlRfpPiTGprTJd4ayKUmSTHqthm9DExTKxh6yUtB4s0YT72vUZD13cnNPEbKbRv0xGnO5tgLM/embed?start=true&loop=false&delayms=60000"
+          src: "https://docs.google.com/presentation/d/e/2PACX-1vSiz7rK4B_UZeAsIBIPT_ZYHb9caPbV_ox2n6rvcRUMGElWGndQgD6UWB_6OLgY47NB41SCi1HXzz9y/embed?start=true&loop=true&delayms=60000"
         }
       ];
       renderDeckList(deckItems);
-      switchSection("datavis");
-      loadVisualization("power-rankings");
+      switchSection("decks");
     });
 });
