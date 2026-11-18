@@ -1,5 +1,12 @@
 [
   {
+    "id": "week-10-chart-party",
+    "title": "Week 10 Chart Party",
+    "date": "2026-11-17",
+    "type": "slides",
+    "src": "https://docs.google.com/presentation/d/e/2PACX-1vSiz7rK4B_UZeAsIBIPT_ZYHb9caPbV_ox2n6rvcRUMGElWGndQgD6UWB_6OLgY47NB41SCi1HXzz9y/embed?start=true&loop=true&delayms=60000"
+  },
+  {
     "id": "week-1-chart-party",
     "title": "Week 1 Chart Party",
     "date": "2026-09-18",
